@@ -12,7 +12,7 @@ const PANELS = [
   { key: "score", label: "Placar", description: "Contador de pontos dos jogadores", selector: ".score-panel" },
   { key: "rounds", label: "Rodadas", description: "Controle de turnos e rodadas", selector: ".rounds-panel" },
   { key: "timer", label: "Relógio", description: "Cronômetro e temporizador", selector: ".timer-panel" },
-  { key: "dice", label: "Dados 3D", description: "Rolagens de dados", selector: ".dice-panel" }
+  { key: "dice", label: "Dados", description: "Rolagens de dados", selector: ".dice-panel" }
 ];
 
 // Rótulos do indicador de sincronização (topo da página).

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#11131a">
   <title>MesaGames</title>
   <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/dice.css">
   <!-- Config pública opcional (gerada por scripts/generate-config.mjs). Precisa vir antes do módulo principal. -->
   <script src="./js/env.js"></script>
   <script type="module" src="./js/main.js"></script>
@@ -59,13 +60,22 @@
       </article>
 
       <article class="panel dice-panel">
-        <div class="panel-heading"><div><p class="eyebrow">04 / SORTE</p><h2>Dados 3D</h2></div><span class="mini-tag">ROLL</span></div>
-        <div class="dice-controls">
-          <label>Tipo<select id="dice-type"><option value="4">d4</option><option value="6" selected>d6</option><option value="8">d8</option><option value="10">d10</option><option value="12">d12</option><option value="20">d20</option><option value="100">d100 (2×d10)</option></select></label>
-          <label>Quantidade<input id="dice-quantity" type="number" min="1" max="10" value="1"></label>
-          <label>Modificador<input id="dice-modifier" type="number" min="-999" max="999" value="0"></label>
+        <div class="panel-heading"><div><p class="eyebrow">04 / SORTE</p><h2>Dados</h2></div><span class="mini-tag">ROLL</span></div>
+        <!-- Seletor visual: um chip por tipo. Toque para somar um dado do tipo. -->
+        <div id="dice-pool" class="dice-pool" role="group" aria-label="Escolha os dados da rolagem"></div>
+        <div class="dice-pool-footer">
+          <span id="dice-pool-notation" class="dice-pool-notation is-empty">Escolha os dados</span>
+          <button id="dice-pool-clear" class="text-button" type="button">Limpar seleção</button>
         </div>
-        <div id="dice-stage" class="dice-stage"><div class="dice-placeholder">🎲<span>Prepare sua rolagem</span></div></div>
+        <div class="dice-modifier">
+          <span>Modificador</span>
+          <div class="dice-modifier-control">
+            <button type="button" data-mod="-1" aria-label="Diminuir modificador">−</button>
+            <input id="dice-modifier" type="number" min="-999" max="999" value="0" inputmode="numeric" aria-label="Modificador">
+            <button type="button" data-mod="1" aria-label="Aumentar modificador">+</button>
+          </div>
+        </div>
+        <div id="dice-stage" class="dice-stage"><div class="dice-placeholder">🎲<span>Monte sua rolagem acima</span></div></div>
         <div class="dice-result"><div><span class="muted-label">RESULTADO</span><strong id="dice-total">—</strong></div><div id="dice-individual" class="dice-individual" aria-live="polite">Aguardando rolagem</div></div>
         <button id="roll-dice" class="button primary full" type="button">🎲 Rolar dados</button>
         <div class="history-heading"><span>Últimas rolagens</span><button id="clear-dice-history" class="text-button" type="button">Limpar</button></div>

@@ -1,7 +1,7 @@
 # MesaGames
 
 Utilidades para jogos de tabuleiro e cartas: placar com pontuação, controle de
-rodadas, cronômetro/temporizador e dados 3D. Aplicação **estática** (HTML, CSS e
+rodadas, cronômetro/temporizador e dados 2D. Aplicação **estática** (HTML, CSS e
 JavaScript com ES Modules nativos), com conta opcional via **Supabase**.
 
 > A conta é opcional. Sem login, tudo funciona e fica salvo apenas no navegador
@@ -161,7 +161,7 @@ O `vercel.json` também define cabeçalhos de segurança HTTP (CSP,
 
 Confira, em **HTTPS** e também no celular:
 
-1. O site abre sem login e o placar, cronômetro, rodadas e dados 3D funcionam.
+1. O site abre sem login e o placar, cronômetro, rodadas e dados funcionam.
 2. Recarregar a página mantém os dados (localStorage).
 3. Criar conta → confirmar e-mail → entrar.
 4. Criar uma partida, adicionar jogadores, alterar pontos.
@@ -233,7 +233,7 @@ Resumo do modelo de segurança do app:
 - **Sem XSS.** Nomes de jogador, nomes de sala e mensagens entram no DOM apenas
   via `textContent`. Não há `eval`, `new Function` nem `document.write`. A CSP do
   `vercel.json` também bloqueia scripts de terceiros que não o `cdn.jsdelivr.net`
-  (usado pelo Three.js) e o Supabase.
+  (usado pelo cliente do Supabase) e o Supabase.
 - **Validação em profundidade.** Entradas são limitadas no HTML (`maxlength`,
   `type=number`, `min`/`max`), no JS (pontos, quantidade de dados, tempo) e no
   banco (`CHECK`s de tamanho/valor e tipos JSONB).
@@ -269,6 +269,7 @@ design), então a rotação é opcional nesse caso.
 ```
 index.html                  # marcação + diálogo de conta e salas
 css/style.css               # estilos (tema claro/escuro)
+css/dice.css                # estilos dos dados 2D (chips, mesa, animação)
 js/main.js                  # orquestra os módulos
 js/state.js                 # estado + persistência local por "escopo" (partida/sala)
 js/config.js                # lê a config do ambiente (não contém valores reais)
@@ -279,7 +280,7 @@ js/rooms.js                 # UI de salas online em tempo real
 js/score.js                 # placar e pontuação
 js/rounds.js                # rodadas
 js/timer.js                 # cronômetro/temporizador
-js/dice.js                  # dados 3D + histórico
+js/dice.js                  # dados 2D + histórico
 js/modal.js                 # modais, toasts, indicadores de status
 SUPABASE.sql                # esquema do banco (idempotente)
 vercel.json                 # build + cabeçalhos de segurança
