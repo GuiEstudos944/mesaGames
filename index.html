@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>MesaGames</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <!-- Config pública opcional (gerada por scripts/generate-config.mjs). Precisa vir antes do módulo principal. -->
+  <script src="./js/env.js"></script>
+  <script type="module" src="./js/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="MesaGames, início">
+      <img src="./imgs/iconMesaGames.png" alt="" class="brand-icon">
+      <span class="brand-name">MesaGames</span>
+    </a>
+    <div class="top-actions">
+      <span id="connection-status" class="connection offline"><i></i><span>Local · sem conta</span></span>
+      <button id="account-open" class="account-button" type="button" title="Conta e partidas salvas">
+        <span class="account-icon" aria-hidden="true">☺</span><span id="account-label">Entrar</span>
+      </button>
+      <button id="theme-toggle" class="icon-button" type="button" aria-label="Alternar tema" title="Alternar tema">☼</button>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="welcome">
+      <div><p class="eyebrow">CENTRAL DE JOGO</p><h1>Sua mesa, suas regras.</h1><p class="muted">Ferramentas rápidas para manter a partida em movimento.</p></div>
+      <div class="welcome-actions">
+        <button id="layout-open" class="button secondary" type="button">⚙ Personalizar painéis</button>
+        <div class="session-pill"><span class="live-dot"></span> <span id="session-pill-label">PAINEL DA PARTIDA</span></div>
+      </div>
+    </section>
+
+    <section class="dashboard" aria-label="Ferramentas da partida">
+      <article class="panel score-panel">
+        <div class="panel-heading"><div><p class="eyebrow">01 / PLACAR</p><h2>Contador de pontos</h2></div><button id="reset-scores" class="text-button" type="button">Zerar pontos</button></div>
+        <div id="players-grid" class="players-grid"></div>
+        <button id="add-player" class="add-player" type="button"><span>＋</span> Adicionar jogador <small id="player-count">4/12</small></button>
+      </article>
+
+      <article class="panel rounds-panel">
+        <div class="panel-heading"><div><p class="eyebrow">02 / PARTIDA</p><h2>Rodadas</h2></div><span class="mini-tag">TURNO</span></div>
+        <div class="round-display"><span>RODADA ATUAL</span><strong id="round-number">01</strong><div class="round-line"></div><p id="turn-label">Turno 1 de 4</p><p id="starter-label">Vez de: Jogador 1</p></div>
+        <div class="button-row"><button id="previous-round" class="button secondary" type="button">← Anterior</button><button id="next-turn" class="button primary" type="button">Próximo turno →</button></div>
+        <div class="button-row"><button id="next-round" class="button secondary" type="button">Avançar rodada →</button></div>
+        <button id="reset-round" class="button subtle full" type="button">Reiniciar rodadas</button>
+      </article>
+
+      <article class="panel timer-panel">
+        <div class="panel-heading"><div><p class="eyebrow">03 / TEMPO</p><h2>Relógio da mesa</h2></div><span class="mini-tag">FOCO</span></div>
+        <div class="tabs" role="tablist" aria-label="Modo do relógio"><button class="tab active" data-mode="stopwatch" role="tab" aria-selected="true">Cronômetro</button><button class="tab" data-mode="countdown" role="tab" aria-selected="false">Temporizador</button></div>
+        <div id="timer-display" class="timer-display" aria-live="off">00:00</div>
+        <div id="timer-config" class="timer-config" hidden><label>Minutos <input id="timer-minutes" type="number" min="0" max="999" value="5"></label><label>Segundos <input id="timer-seconds" type="number" min="0" max="59" value="0"></label></div>
+        <div class="button-row"><button id="timer-toggle" class="button primary" type="button">▶ Iniciar</button><button id="timer-reset" class="button secondary" type="button">↺ Zerar</button></div>
+        <p id="timer-hint" class="hint">Conte o tempo da sua partida.</p>
+      </article>
+
+      <article class="panel dice-panel">
+        <div class="panel-heading"><div><p class="eyebrow">04 / SORTE</p><h2>Dados 3D</h2></div><span class="mini-tag">ROLL</span></div>
+        <div class="dice-controls">
+          <label>Tipo<select id="dice-type"><option value="4">d4</option><option value="6" selected>d6</option><option value="8">d8</option><option value="10">d10</option><option value="12">d12</option><option value="20">d20</option><option value="100">d100 (2×d10)</option></select></label>
+          <label>Quantidade<input id="dice-quantity" type="number" min="1" max="10" value="1"></label>
+          <label>Modificador<input id="dice-modifier" type="number" min="-999" max="999" value="0"></label>
+        </div>
+        <div id="dice-stage" class="dice-stage"><div class="dice-placeholder">🎲<span>Prepare sua rolagem</span></div></div>
+        <div class="dice-result"><div><span class="muted-label">RESULTADO</span><strong id="dice-total">—</strong></div><div id="dice-individual" class="dice-individual" aria-live="polite">Aguardando rolagem</div></div>
+        <button id="roll-dice" class="button primary full" type="button">🎲 Rolar dados</button>
+        <div class="history-heading"><span>Últimas rolagens</span><button id="clear-dice-history" class="text-button" type="button">Limpar</button></div>
+        <ol id="dice-history" class="dice-history"><li class="empty-history">Nenhuma rolagem ainda.</li></ol>
+      </article>
+    </section>
+
+    <section id="data-panel" class="panel data-panel" hidden>
+      <div class="panel-heading"><div><p class="eyebrow">CONFIGURAÇÕES</p><h2>Dados e Banco</h2><p class="muted small">Gerencie os registros salvos nesta mesa.</p></div><span class="database-icon">▤</span></div>
+      <div class="management-grid">
+        <button class="manage-button" data-action="clear-dice" type="button"><span>🎲</span><b>Limpar histórico de dados</b><small>Apaga as rolagens salvas</small></button>
+        <button class="manage-button" data-action="clear-score-history" type="button"><span>↗</span><b>Limpar histórico de pontuação</b><small>Apaga as alterações registradas</small></button>
+        <button class="manage-button" data-action="zero-all-scores" type="button"><span>０</span><b>Zerar pontos de todos</b><small>Mantém os jogadores</small></button>
+        <button class="manage-button" data-action="reset-rounds" type="button"><span>↻</span><b>Resetar rodadas</b><small>Volta para a rodada 1</small></button>
+        <button class="manage-button danger-soft" data-action="remove-all-players" type="button"><span>♙</span><b>Remover todos os jogadores</b><small>Recria os 4 jogadores padrão</small></button>
+        <button class="manage-button danger-soft" data-action="reset-all" type="button"><span>⌫</span><b>Limpar TODAS as tabelas</b><small>Restaura a mesa ao estado inicial</small></button>
+        <button id="export-json" class="manage-button export-button" type="button"><span>⇩</span><b>Exportar dados (JSON)</b><small>Baixa uma cópia dos dados atuais</small></button>
+      </div>
+      <p class="privacy-note">A conta é opcional: sem login, tudo continua funcionando e fica salvo apenas neste navegador. Com login, as partidas são salvas na nuvem e ficam disponíveis em outros dispositivos.</p>
+    </section>
+    <footer>
+      Feito para boas partidas. 
+      <span class="brand-name-footer">MesaGames</span>
+    </footer>
+  </main>
+
+  <div id="account-dialog" class="account-dialog" hidden>
+    <div class="account-backdrop" data-close></div>
+    <section class="account-box" role="dialog" aria-modal="true" aria-labelledby="account-title">
+      <header class="account-head">
+        <h2 id="account-title">Conta e partidas</h2>
+        <button id="account-close" class="icon-button" type="button" aria-label="Fechar">×</button>
+      </header>
+
+      <div id="account-auth-view">
+        <div class="tabs" role="tablist" aria-label="Entrar ou criar conta">
+          <button id="auth-mode-signup" class="tab active" type="button" role="tab" aria-selected="true">Criar conta</button>
+          <button id="auth-mode-login" class="tab" type="button" role="tab" aria-selected="false">Entrar</button>
+        </div>
+        <p id="auth-form-title" class="hint centered">Crie sua conta gratuita</p>
+        <label class="account-field" id="auth-name-field">Nome (opcional)<input id="auth-name" type="text" maxlength="60" autocomplete="name" placeholder="Como quer ser chamado"></label>
+        <label class="account-field">E-mail<input id="auth-email" type="email" autocomplete="email" placeholder="voce@email.com"></label>
+        <label class="account-field">Senha<input id="auth-password" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"></label>
+        <button id="auth-submit" class="button primary full" type="button" data-mode="signup">Criar conta</button>
+        <button id="auth-forgot" class="text-button full" type="button">Esqueci minha senha</button>
+        <button id="auth-continue" class="text-button full" type="button">Continuar sem conta (dados só neste navegador)</button>
+        <p id="account-message" class="account-message" role="status"></p>
+      </div>
+
+      <div id="account-session-view" hidden>
+        <p class="account-user">Conectado como <strong id="account-user-email"></strong></p>
+        <label class="account-field">Apelido<input id="profile-name" type="text" maxlength="60" autocomplete="nickname" placeholder="Como quer ser chamado"></label>
+        <button id="save-profile" class="button secondary full" type="button">Salvar apelido</button>
+        <div id="session-tools">
+          <p class="account-label">PARTIDAS SALVAS</p>
+          <select id="session-select" class="account-input" aria-label="Selecionar partida"></select>
+          <div class="account-row">
+            <button id="new-session" class="button primary" type="button">Nova partida</button>
+            <button id="rename-session" class="button secondary" type="button">Renomear</button>
+            <button id="delete-session" class="button secondary danger-outline" type="button">Excluir</button>
+          </div>
+          <p id="active-session-name" class="hint"></p>
+        </div>
+        <button id="account-logout" class="button subtle full" type="button">Sair da conta</button>
+      </div>
+
+      <div id="account-recovery-view" hidden>
+        <p class="account-user">Defina uma nova senha para <strong id="recovery-email"></strong>.</p>
+        <label class="account-field">Nova senha<input id="recovery-password" type="password" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"></label>
+        <button id="recovery-submit" class="button primary full" type="button">Salvar nova senha</button>
+        <p id="recovery-message" class="account-message" role="status"></p>
+      </div>
+    </section>
+  </div>
+
+  <div id="layout-dialog" class="account-dialog" hidden>
+    <div class="account-backdrop" data-close></div>
+    <section class="account-box" role="dialog" aria-modal="true" aria-labelledby="layout-title">
+      <header class="account-head">
+        <h2 id="layout-title">Personalizar painéis</h2>
+        <button id="layout-close" class="icon-button" type="button" aria-label="Fechar">×</button>
+      </header>
+      <p class="hint">Marque as ferramentas que devem aparecer na sua mesa. Você pode trazê-las de volta quando quiser.</p>
+      <div id="layout-options" class="layout-options"></div>
+      <button id="layout-show-all" class="text-button full" type="button">Mostrar todos os painéis</button>
+    </section>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Dependências (caso você use alguma ferramenta local)
+node_modules/
+
+# Variáveis de ambiente — NUNCA versione valores reais
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# Logs e arquivos de sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
