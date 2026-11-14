@@ -46,7 +46,7 @@ const STAGGER = 90;          // atraso entre dados (efeito cascata)
 
 /* ------------------------------------------------------------ estado local */
 
-const pool = new Map();      // sides -> quantidade escolhida
+const pool = new Map([[6, 1]]); // começa com um d6 selecionado
 const chipRefs = new Map();  // sides -> { chip, count, remove }
 let rolling = false;         // trava enquanto anima
 let currentRoll = null;      // { specs, dice, modifier } da última rolagem

@@ -104,6 +104,13 @@ function renderActiveRoom() {
     if (nameEl) nameEl.textContent = room.name;
     if (codeEl) codeEl.textContent = room.code;
     if (kindEl) kindEl.textContent = room.is_public ? "Sala pública" : "Sala privada (só com o código)";
+    const viewerButton = $("room-viewer-open");
+    if (viewerButton) {
+      viewerButton.disabled = !room.is_public;
+      viewerButton.title = room.is_public
+        ? "Copiar link de acompanhamento"
+        : "O painel sem login só está disponível para salas públicas";
+    }
   }
   const leave = $("room-leave");
   if (leave) leave.textContent = isHost ? "Encerrar sala" : "Sair da sala";
@@ -149,7 +156,7 @@ async function enterRoom(roomId) {
   isHost = data.host_id === user.id;
 
   api.setActiveSessionId(null);
-  api.setActiveRoomId(roomId);
+  api.setActiveRoomId(roomId, isHost);
   setLocalScope(roomId);
 
   const doc = data.state && typeof data.state === "object" ? data.state : null;
@@ -243,6 +250,7 @@ async function createRoom() {
   $("room-name").value = "";
   await enterRoom(created.id);
   setRoomsMessage("");
+  document.dispatchEvent(new CustomEvent("mesa:room-created"));
   toast(`Sala criada! Compartilhe o código ${created.code}.`, "success", 6000);
 }
 
@@ -345,6 +353,23 @@ export function initRooms() {
 
   const leave = $("room-leave");
   if (leave) leave.addEventListener("click", () => guard(leaveActiveRoom));
+
+  const viewerButton = $("room-viewer-open");
+  if (viewerButton) viewerButton.addEventListener("click", async () => {
+    if (!room?.is_public) {
+      toast("O painel de visualização sem login exige uma sala pública.", "error");
+      return;
+    }
+    const url = new URL("./painel.html", location.href);
+    url.searchParams.set("sala", room.code);
+    url.searchParams.set("modo", "painel");
+    try {
+      await navigator.clipboard.writeText(url.href);
+      toast("Link do painel copiado. Qualquer pessoa com o link poderá acompanhar a sala.");
+    } catch {
+      toast(`Não foi possível copiar. Link do painel: ${url.href}`, "error", 7000);
+    }
+  });
 
   // Mantém a lista de salas abertas atualizada enquanto a aba estiver visível.
   if (!pollTimer) {

@@ -10,6 +10,7 @@ import {
 const SESSION_TABLE = "game_sessions";
 const ROOM_TABLE = "rooms";
 const ROOM_MEMBERS_TABLE = "room_members";
+const TIMER_TABLE = "timer_states";
 const SYNC_DELAY = 700;          // debounce do auto-save
 const MAX_PAYLOAD = 200_000;     // ~200 KB: acima disso o histórico é reduzido
 const MAX_NAME = 60;
@@ -24,6 +25,7 @@ if (SUPABASE_CONFIGURED) {
 
 let activeSessionId = null;
 let activeRoomId = null;
+let activeRoomHost = false;
 let syncTimer = null;
 let syncing = false;
 let pendingAgain = false;
@@ -307,6 +309,77 @@ export async function listRoomMembers(id) {
   return data ?? [];
 }
 
+/* ---------------------------------------------------------- timer compartilhado */
+export async function getServerTime() {
+  if (!client) return new Date().toISOString();
+  const { data, error } = await client.rpc("get_server_time");
+  if (error) throw error;
+  return data;
+}
+
+export async function getTimerState(scopeType, scopeId) {
+  if (!client || !scopeId) return null;
+  const column = scopeType === "room" ? "room_id" : "session_id";
+  const { data, error } = await client.from(TIMER_TABLE)
+    .select("room_id,session_id,mode,status,started_at,duration_ms,elapsed_ms_when_paused,updated_at")
+    .eq(column, scopeId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+export async function controlTimerState(scopeType, scopeId, action, mode = null, durationMs = null) {
+  if (!client) throw new Error("Supabase não configurado.");
+  const { data, error } = await client.rpc("control_timer_state", {
+    p_scope_type: scopeType,
+    p_scope_id: scopeId,
+    p_action: action,
+    p_mode: mode,
+    p_duration_ms: durationMs
+  });
+  if (error) throw error;
+  return data;
+}
+
+export function subscribeTimerState(scopeType, scopeId, handlers = {}) {
+  if (!client || !scopeId) return () => {};
+  const column = scopeType === "room" ? "room_id" : "session_id";
+  const channel = client.channel(`mesa-timer-${scopeType}-${scopeId}`);
+  channel
+    .on("postgres_changes", {
+      event: "*", schema: "public", table: TIMER_TABLE, filter: `${column}=eq.${scopeId}`
+    }, payload => handlers.onChange?.(payload))
+    .subscribe(status => { try { handlers.onStatus?.(status); } catch (error) { console.warn(error); } });
+  return () => { try { client.removeChannel(channel); } catch { /* canal já removido */ } };
+}
+
+/** Leitura segura de sala pública usada pela tela anônima de acompanhamento. */
+export async function getPublicRoomByCode(code) {
+  if (!client) throw new Error("Supabase não configurado.");
+  const { data, error } = await client.from(ROOM_TABLE)
+    .select("id,code,name,is_public,status,state,revision,updated_at")
+    .eq("code", String(code || "").trim().toUpperCase())
+    .eq("is_public", true)
+    .eq("status", "open")
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+export function subscribePublicRoom(id, handlers = {}) {
+  if (!client || !id) return () => {};
+  const channel = client.channel(`mesa-public-view-${id}`);
+  channel
+    .on("postgres_changes", {
+      event: "*", schema: "public", table: ROOM_TABLE, filter: `id=eq.${id}`
+    }, payload => handlers.onRoomChange?.(payload))
+    .on("postgres_changes", {
+      event: "*", schema: "public", table: TIMER_TABLE, filter: `room_id=eq.${id}`
+    }, payload => handlers.onTimerChange?.(payload))
+    .subscribe(status => { try { handlers.onStatus?.(status); } catch (error) { console.warn(error); } });
+  return () => { try { client.removeChannel(channel); } catch { /* canal já removido */ } };
+}
+
 /** Remove a participação do usuário (convidado saindo). */
 export async function leaveRoom(id) {
   if (!client) return;
@@ -338,12 +411,26 @@ export function subscribeRoom(id, handlers = {}) {
 
 /* ------------------------------------------------------- sincronização ------------------------------------------------------ */
 export function getActiveSessionId() { return activeSessionId; }
-export function setActiveSessionId(id) { activeSessionId = id || null; }
+export function setActiveSessionId(id) {
+  activeSessionId = id || null;
+  if (activeSessionId) {
+    activeRoomId = null;
+    activeRoomHost = false;
+  }
+}
 export function getActiveRoomId() { return activeRoomId; }
-export function setActiveRoomId(id) { activeRoomId = id || null; }
+export function setActiveRoomId(id, isHost = false) {
+  activeRoomId = id || null;
+  activeRoomHost = Boolean(activeRoomId && isHost);
+  if (activeRoomId) activeSessionId = null;
+}
+export function canControlActiveTimer() {
+  return activeRoomId ? activeRoomHost : Boolean(activeSessionId);
+}
 
 function buildPayload() {
   const doc = snapshot();
+  delete doc.timer;
   if (JSON.stringify(doc).length > MAX_PAYLOAD) doc.scoreHistory = doc.scoreHistory.slice(-100);
   if (JSON.stringify(doc).length > MAX_PAYLOAD) doc.diceHistory = doc.diceHistory.slice(0, 3);
   return doc;
@@ -408,6 +495,7 @@ export async function openSession(id) {
 
   // Abrir uma partida salva significa sair de qualquer sala online.
   activeRoomId = null;
+  activeRoomHost = false;
   setActiveSessionId(id);
   setLocalScope(id);
 
@@ -440,7 +528,11 @@ export async function openSession(id) {
 }
 
 /** Sai da conta mantendo o rascunho local do escopo anônimo. */
-export function leaveRemoteSession() { activeSessionId = null; activeRoomId = null; }
+export function leaveRemoteSession() {
+  activeSessionId = null;
+  activeRoomId = null;
+  activeRoomHost = false;
+}
 
 if (typeof window !== "undefined") {
   window.addEventListener("offline", () => emitSyncStatus("offline"));

@@ -8,6 +8,14 @@ const MAX_SCORE_HISTORY = 500;
 const SCOPE_KEY = "mesa-active-scope-v1";
 const STORAGE_PREFIX = "mesa-boardgame-state-v1";
 const makeId = () => globalThis.crypto?.randomUUID?.() ?? `p-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const defaultTimer = () => ({
+  mode: "stopwatch",
+  status: "stopped",
+  started_at: null,
+  duration_ms: 300_000,
+  elapsed_ms_when_paused: 0,
+  updated_at: new Date().toISOString()
+});
 
 function safeStorage() {
   try { return globalThis.localStorage ?? null; } catch { return null; }
@@ -25,7 +33,7 @@ export const state = {
   starterIndex: 0,
   diceHistory: [],
   scoreHistory: [],
-  timer: { mode: "stopwatch", elapsed: 0 },
+  timer: defaultTimer(),
   theme: "dark",
   // Quais painéis ficam visíveis na mesa (o usuário escolhe em "Personalizar").
   panels: { score: true, rounds: true, timer: true, dice: true },
@@ -67,6 +75,7 @@ export function snapshot() {
     starterIndex: state.starterIndex,
     diceHistory: state.diceHistory.slice(0, MAX_DICE_HISTORY),
     scoreHistory: state.scoreHistory.slice(-MAX_SCORE_HISTORY),
+    timer: { ...state.timer },
     theme: state.theme,
     panels: { ...state.panels },
     updatedAt: state.updatedAt
@@ -90,6 +99,26 @@ export function applySnapshot(data) {
   state.starterIndex = Math.max(0, Math.trunc(Number(data.starterIndex)) || 0) % Math.max(1, state.players.length);
   state.diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory.slice(0, MAX_DICE_HISTORY) : [];
   state.scoreHistory = Array.isArray(data.scoreHistory) ? data.scoreHistory.slice(-MAX_SCORE_HISTORY) : [];
+  if (data.timer && typeof data.timer === "object") {
+    const mode = data.timer.mode === "countdown" ? "countdown" : "stopwatch";
+    const status = ["running", "paused"].includes(data.timer.status) ? data.timer.status : "stopped";
+    const parsedDuration = Math.trunc(Number(data.timer.duration_ms));
+    const parsedElapsed = Math.trunc(Number(data.timer.elapsed_ms_when_paused));
+    state.timer = {
+      mode,
+      status,
+      started_at: typeof data.timer.started_at === "string" && Number.isFinite(Date.parse(data.timer.started_at))
+        ? new Date(data.timer.started_at).toISOString()
+        : null,
+      duration_ms: Math.min(59_999_000, Math.max(0, Number.isFinite(parsedDuration) ? parsedDuration : 300_000)),
+      elapsed_ms_when_paused: Math.max(0, Number.isFinite(parsedElapsed) ? parsedElapsed : 0),
+      updated_at: Number.isFinite(Date.parse(data.timer.updated_at))
+        ? new Date(data.timer.updated_at).toISOString()
+        : new Date().toISOString()
+    };
+  } else {
+    state.timer = defaultTimer();
+  }
   if (data.theme === "light" || data.theme === "dark") state.theme = data.theme;
   // Documentos antigos não têm `panels`: nesse caso todos os painéis ficam visíveis.
   const panels = data.panels && typeof data.panels === "object" ? data.panels : {};

@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="./imgs/iconMesaGames.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nova+Square&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
   <!-- Aplica o tema ANTES do paint para evitar piscar (FOUC). Sem módulo, inline. -->
   <script>
     (function () {
@@ -490,6 +490,7 @@
         <div id="rooms-active" hidden>
           <p class="account-user">Você está na sala <strong id="active-room-name"></strong></p>
           <p class="account-user">Código: <strong id="active-room-code"></strong> · <span id="active-room-kind"></span></p>
+          <button id="room-viewer-open" class="button secondary full" type="button">Abrir painel de visualização</button>
           <p class="account-label">JOGADORES NA SALA</p>
           <ul id="room-members" class="rooms-list"></ul>
           <button id="room-leave" class="button secondary danger-outline full" type="button">Sair da sala</button>

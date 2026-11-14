@@ -3,7 +3,10 @@ import { initScore, renderScore, addPlayer, resetScores } from "./score.js";
 import { initRounds, renderRounds } from "./rounds.js";
 import { initTimer } from "./timer.js";
 import { initDice, renderDiceHistory } from "./dice.js";
-import { confirmarModal, toast, informativoModal, setConnectionStatus, setSessionPill } from "./modal.js";
+import {
+  confirmarModal, toast, informativoModal, setConnectionStatus, setSessionPill,
+  registerModalLayer, unregisterModalLayer
+} from "./modal.js";
 import { isSupabaseConfigured, scheduleSync, setSyncStatusListener } from "./supabase.js";
 import { initAccount, isAdmin } from "./account.js";
 
@@ -108,16 +111,20 @@ function renderLayoutOptions() {
 function initLayout() {
   const dialog = document.getElementById("layout-dialog");
   if (!dialog) return;
-  const close = () => { dialog.hidden = true; };
+  const close = () => {
+    if (dialog.hidden) return;
+    dialog.hidden = true;
+    unregisterModalLayer("layout-dialog");
+  };
   document.getElementById("layout-open").addEventListener("click", () => {
     renderLayoutOptions();
     dialog.hidden = false;
+    registerModalLayer("layout-dialog", dialog, close);
   });
   document.getElementById("layout-close").addEventListener("click", close);
   dialog.addEventListener("click", event => {
     if (event.target instanceof HTMLElement && event.target.dataset.close !== undefined) close();
   });
-  document.addEventListener("keydown", event => { if (event.key === "Escape" && !dialog.hidden) close(); });
   document.getElementById("layout-show-all").addEventListener("click", () => {
     PANELS.forEach(panel => { state.panels[panel.key] = true; });
     applyPanelVisibility();

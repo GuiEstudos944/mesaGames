@@ -1,7 +1,10 @@
 // Conta do usuário: autenticação, partidas salvas e troca de contexto local/nuvem.
 // A mesa anônima continua funcionando normalmente; a conta é opcional.
 import { state, setLocalScope, loadLocalState, resetGameState, readLocalSnapshot, createDefaultPlayers } from "./state.js";
-import { toast, confirmarModal, editarNomeModal, setConnectionStatus, setSessionPill } from "./modal.js";
+import {
+  toast, confirmarModal, editarNomeModal, setConnectionStatus, setSessionPill,
+  registerModalLayer, unregisterModalLayer
+} from "./modal.js";
 import * as api from "./supabase.js";
 import { ADMIN_EMAIL } from "./config.js";
 import { initRooms, refreshRoomsPanel, resetRooms } from "./rooms.js";
@@ -22,11 +25,19 @@ const show = (el, visible) => { if (el) el.hidden = !visible; };
 /* ------------------------------------------------------------------- views */
 function openDialog() {
   const dialog = $("account-dialog");
-  if (dialog) dialog.hidden = false;
+  if (dialog?.hidden) {
+    dialog.hidden = false;
+    registerModalLayer("account-dialog", dialog, () => closeDialog());
+  }
   // Se o diálogo abrir já na aba de salas, garante uma lista atualizada.
   if ($("account-rooms-view") && !$("account-rooms-view").hidden) refreshRoomsPanel().catch(error => console.error(error));
 }
-function closeDialog() { const dialog = $("account-dialog"); if (dialog) dialog.hidden = true; }
+function closeDialog() {
+  const dialog = $("account-dialog");
+  if (!dialog || dialog.hidden) return;
+  dialog.hidden = true;
+  unregisterModalLayer("account-dialog");
+}
 function message(text, error = false) {
   const el = $("account-message");
   if (!el) return;
@@ -245,9 +256,8 @@ function bindUi() {
   $("account-dialog").addEventListener("click", event => {
     if (event.target instanceof HTMLElement && event.target.dataset.close !== undefined) closeDialog();
   });
-  document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && !$("account-dialog").hidden) closeDialog();
-  });
+  document.addEventListener("mesa:room-created", closeDialog);
+  document.addEventListener("mesa:room-left", closeDialog);
 
   $("account-tab-account").addEventListener("click", () => showAccountTab("account"));
   $("account-tab-rooms").addEventListener("click", () => showAccountTab("rooms"));
@@ -377,17 +387,20 @@ function bindUi() {
       message: "Dê um nome para identificar esta partida.",
       confirmText: "Criar",
       placeholder: "Nome da partida",
-      label: "Nome da partida"
+      label: "Nome da partida",
+      onSubmit: async value => {
+        busy = true;
+        try {
+          await createSession(value);
+          return true;
+        } finally {
+          busy = false;
+        }
+      }
     });
     if (name === null) return;
-    busy = true;
-    try {
-      await createSession(name);
-      closeDialog();
-      toast("Partida criada.");
-    } catch (error) {
-      toast(`Não foi possível criar a partida: ${error.message}`, "error");
-    } finally { busy = false; }
+    closeDialog();
+    toast("Partida criada.");
   });
 
   $("session-select").addEventListener("change", async event => {
@@ -406,20 +419,23 @@ function bindUi() {
       title: "Renomear partida",
       message: "Escolha um novo nome para esta partida.",
       placeholder: "Nome da partida",
-      label: "Nome da partida"
+      label: "Nome da partida",
+      onSubmit: async value => {
+        busy = true;
+        try {
+          await api.renameGameSession(id, value);
+          await refreshSessions();
+          $("session-select").value = id;
+          $("active-session-name").textContent = value;
+          setSessionPill(value.toUpperCase());
+          return true;
+        } finally {
+          busy = false;
+        }
+      }
     });
     if (name === null || name === session.name) return;
-    busy = true;
-    try {
-      await api.renameGameSession(id, name);
-      await refreshSessions();
-      $("session-select").value = id;
-      $("active-session-name").textContent = name;
-      setSessionPill(name.toUpperCase());
-      toast("Partida renomeada.");
-    } catch (error) {
-      toast(`Erro ao renomear: ${error.message}`, "error");
-    } finally { busy = false; }
+    toast("Partida renomeada.");
   });
 
   $("delete-session").addEventListener("click", async () => {

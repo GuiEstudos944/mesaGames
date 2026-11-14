@@ -19,6 +19,10 @@
   --shadow: 0 1.125rem 3.125rem #050505;
   --radius: 1.25rem;
 
+  /* Tipografia: Poppins no texto, Nova Square nos números (relógio, rodada e pontos). */
+  --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-numeric: "Nova Square", "Poppins", ui-sans-serif, system-ui, sans-serif;
+
   /* Escala de espaçamentos (1rem = 16px). */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -68,6 +72,9 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) var(--surface-2);
+  scrollbar-gutter: stable;
 }
 
 /* Transição suave de tema (claro ↔ escuro) em todas as propriedades de cor.
@@ -83,10 +90,11 @@ html {
 
 body {
   margin: 0;
-  overflow-x: hidden;
+  min-width: 0;
+  overflow-x: clip;
   background: var(--bg);
   color: var(--text);
-  font: 0.9375rem/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 0.9375rem/1.5 var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -194,6 +202,7 @@ a:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  min-width: 0;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: saturate(140%) blur(0.625rem);
@@ -203,6 +212,8 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+  flex: 0 1 auto;
   text-decoration: none;
   color: var(--text);
   font-size: 1.4375rem;
@@ -236,12 +247,18 @@ a:focus-visible {
   color: var(--text);
   font-weight: 850;
   letter-spacing: -0.0625rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .top-actions {
   display: flex;
   align-items: center;
   gap: 0.875rem;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .connection {
@@ -288,6 +305,7 @@ a:focus-visible {
   font-weight: 700;
   transition: background .18s ease, border-color .18s ease, transform .12s ease;
   min-height: 2.75rem;
+  min-width: 0;
 }
 
 .account-button:hover {
@@ -785,7 +803,7 @@ a:focus-visible {
   line-height: 1.15;
   margin: 0.5rem 0 0.625rem;
   font-variant-numeric: tabular-nums;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-numeric);
 }
 
 .player-score small {
@@ -793,7 +811,7 @@ a:focus-visible {
   color: var(--muted);
   letter-spacing: 0;
   font-weight: 600;
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .score-buttons {
@@ -929,7 +947,7 @@ a:focus-visible {
   letter-spacing: -0.25rem;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-numeric);
   font-weight: 800;
 }
 
@@ -1121,7 +1139,7 @@ a:focus-visible {
   text-align: center;
   padding: 1.625rem 0 1.25rem;
   font-variant-numeric: tabular-nums;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-numeric);
   line-height: 1;
 }
 
@@ -1158,7 +1176,7 @@ a:focus-visible {
   text-align: center;
   font-size: 1rem;
   font-weight: 700;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-numeric);
 }
 
 .hint {
@@ -1367,13 +1385,21 @@ a:focus-visible {
   transition: opacity .18s ease;
 }
 
+.modal-overlay.is-underlay {
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+}
+
+.modal-overlay.is-underlay .modal-box {
+  filter: brightness(.82);
+}
+
 .modal-overlay.open {
   opacity: 1;
 }
 
 .modal-box {
   width: min(100%, 26.875rem);
-  max-width: calc(100vw - 2rem);
+  max-width: calc(100dvi - 2rem);
   max-height: calc(100dvh - 2.5rem);
   overflow-y: auto;
   background: var(--surface);
@@ -1398,6 +1424,13 @@ a:focus-visible {
   font-size: 0.8125rem;
   color: var(--muted);
   margin: 0 0 1.125rem;
+}
+
+.modal-box .modal-form-error {
+  margin: 0.625rem 0 0;
+  color: var(--red);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
 }
 
 .modal-label {
@@ -1447,7 +1480,7 @@ a:focus-visible {
   box-shadow: var(--shadow);
   font-size: 0.75rem;
   animation: toast-in .2s ease;
-  max-width: min(22.5rem, calc(100vw - 2.5rem));
+  max-width: min(22.5rem, calc(100dvi - 2.5rem));
 }
 
 .toast.success {
@@ -1489,7 +1522,7 @@ a:focus-visible {
 .account-box {
   position: relative;
   width: min(100%, 27.5rem);
-  max-height: calc(100vh - 2.5rem);
+  max-height: calc(100dvh - 2.5rem);
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1759,6 +1792,367 @@ a:focus-visible {
   }
 }
 
+/* ====================================================== DESKTOP COMPACTO */
+@media (min-width: 68.76em) {
+  .page-shell {
+    position: relative;
+    padding: 0.75rem 1.5rem 1rem;
+  }
+
+  .hero {
+    position: absolute;
+    inset-block-start: 0.625rem;
+    inset-inline-end: 1.5rem;
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: none;
+    text-align: right;
+  }
+
+  .hero > :not(.hero-cta-row) {
+    display: none;
+  }
+
+  .hero-cta-row {
+    justify-content: flex-end;
+  }
+
+  .hero-line {
+    display: none;
+  }
+
+  .hero-cta {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.75rem;
+  }
+
+  .section-heading {
+    min-height: 2.75rem;
+    margin: 0 0 0.75rem;
+    padding-inline-end: 15rem;
+    gap: 0.625rem;
+  }
+
+  .section-heading-title {
+    font-size: 0.875rem;
+    letter-spacing: 0.075em;
+  }
+
+  .session-pill {
+    padding: 0.3125rem 0.625rem;
+  }
+
+  .dashboard {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  .panel {
+    padding: 0.875rem;
+    border-radius: 1rem;
+  }
+
+  .panel-heading {
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.625rem;
+  }
+
+  .panel-heading h2 {
+    font-size: clamp(1rem, 1.15vw, 1.25rem);
+  }
+
+  .panel-icon {
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+  }
+
+  .panel-icon svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .players-grid {
+    gap: 0.375rem;
+  }
+
+  .player-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    padding: 0.4375rem 0.5rem;
+    border-radius: 0.6875rem;
+  }
+
+  .player-top {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .player-name {
+    max-width: calc(100% - 1.5rem);
+    gap: 0.375rem;
+    font-size: 0.75rem;
+  }
+
+  .player-name::before {
+    width: 0.5625rem;
+    height: 0.5625rem;
+  }
+
+  .player-name::after {
+    width: 0.6875rem;
+    height: 0.6875rem;
+  }
+
+  .player-remove {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .player-score {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    font-size: clamp(1rem, 1.5vw, 1.375rem);
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .player-score small {
+    font-size: 0.5625rem;
+  }
+
+  .score-buttons {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
+  .score-buttons button {
+    min-width: 0;
+    min-height: 2.75rem;
+    padding-inline: 0.125rem;
+    font-size: 0.6875rem;
+  }
+
+  .add-player {
+    min-height: 2.75rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .reset-scores-btn {
+    margin-top: 0.5rem;
+  }
+
+  .round-display {
+    padding: 0;
+  }
+
+  .turn-tag {
+    min-height: 2.75rem;
+    margin-bottom: 0.375rem;
+    padding: 0.625rem 0.875rem;
+  }
+
+  .round-current-block {
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.75rem;
+  }
+
+  .round-current-label {
+    font-size: 0.5625rem;
+    letter-spacing: 0.075rem;
+  }
+
+  .round-display strong {
+    font-size: clamp(2rem, 4.5vw, 3rem);
+    letter-spacing: 0;
+  }
+
+  .round-line {
+    margin: 0.5rem auto;
+  }
+
+  .turn-player {
+    margin-top: 0.25rem;
+  }
+
+  .turn-player::after {
+    margin-top: 0.25rem;
+  }
+
+  .rounds-panel > .button-row {
+    margin-top: auto;
+  }
+
+  .rounds-panel > .button-row .button,
+  .rounds-panel > .button.full {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .rounds-panel > .button.full {
+    margin-top: 0.375rem;
+  }
+
+  .timer-panel > .tabs,
+  .timer-panel > .button-row {
+    gap: 0.375rem;
+  }
+
+  .timer-panel > .tabs {
+    margin-bottom: 0.25rem;
+  }
+
+  .timer-panel > .tabs .tab {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.375rem;
+    font-size: 0.6875rem;
+  }
+
+  .timer-display {
+    padding: 0.75rem 0 0.625rem;
+    font-size: clamp(2rem, 3.2vw, 3rem);
+    letter-spacing: 0;
+  }
+
+  .timer-config {
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+  }
+
+  .timer-config input {
+    min-height: 2.75rem;
+    padding: 0.375rem;
+  }
+
+  .timer-panel > .button-row .button {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.375rem;
+  }
+
+  .hint {
+    margin-top: 0.5rem;
+  }
+
+  .panel .dice-pool {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.3125rem;
+  }
+
+  .panel .dice-chip {
+    min-height: 2.75rem;
+    padding: 0.25rem 0.125rem;
+    border-radius: 0.625rem;
+  }
+
+  .panel .dice-chip-shape {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .panel .dice-pool-footer {
+    margin-top: 0.375rem;
+  }
+
+  .panel .dice-modifier {
+    margin-top: 0.375rem;
+  }
+
+  .panel .dice-stage {
+    min-height: 6rem;
+    margin: 0.375rem 0 0.125rem;
+    padding: 0.5rem;
+  }
+
+  .panel .die {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .panel .dice-result {
+    padding: 0.25rem 0;
+  }
+
+  .panel .dice-result strong {
+    font-size: 1.5rem;
+  }
+
+  .panel .roll-dice-btn {
+    min-height: 2.75rem;
+    padding: 0.5rem;
+  }
+
+  .panel .history-heading {
+    margin-top: 0.375rem;
+  }
+
+  .panel .dice-history {
+    max-height: 3.5rem;
+    margin-top: 0.125rem;
+  }
+
+  .panel .dice-history li {
+    padding: 0.25rem 0;
+  }
+
+  .data-panel {
+    margin-top: 0.75rem;
+    padding: 0.875rem;
+  }
+
+  .data-panel-head {
+    margin-bottom: 0.5rem;
+  }
+
+  .data-panel-head .eyebrow {
+    margin-bottom: 0.125rem;
+  }
+
+  .data-panel-head h2 {
+    font-size: 1rem;
+  }
+
+  .data-panel-head .muted {
+    font-size: 0.6875rem;
+  }
+
+  .management-grid {
+    gap: 0.5rem;
+  }
+
+  .manage-button {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.625rem;
+    gap: 0.25rem;
+  }
+
+  .manage-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .manage-button small {
+    display: none;
+  }
+
+  .site-footer {
+    margin-top: 0.5rem;
+    padding-block: 0.5rem;
+  }
+}
+
 /* ============================================================ RESPONSIVO */
 @media (max-width: 68.75em) {
   .dashboard {
@@ -1851,10 +2245,51 @@ a:focus-visible {
     display: none;
   }
 
+  .section-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+
+  .section-heading-icon,
+  .section-heading-line {
+    display: none;
+  }
+
+  .section-heading-title {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.75rem;
+    letter-spacing: 0.075em;
+    text-overflow: ellipsis;
+  }
+
+  .session-pill {
+    min-width: 0;
+    max-width: 8.5rem;
+    padding-inline: 0.625rem;
+  }
+
+  #session-pill-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .topbar {
     padding-top: env(safe-area-inset-top);
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
+    gap: 0.5rem;
+  }
+
+  .brand {
+    gap: 0.5rem;
+    font-size: 1.0625rem;
+  }
+
+  .top-actions {
+    gap: 0.5rem;
   }
 
   .page-shell {
@@ -1871,7 +2306,7 @@ a:focus-visible {
 
   .account-button {
     max-width: 8.25rem;
-    padding: 0.5625rem 0.75rem;
+    padding: 0.5625rem 0.625rem;
   }
 
   .score-buttons {
