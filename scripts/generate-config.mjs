@@ -46,6 +46,14 @@ const anonKey = pick("SUPABASE_ANON_KEY");
 const redirect = pick("AUTH_REDIRECT_URL");
 const adminEmail = pick("ADMIN_EMAIL");
 
+if (process.env.VERCEL && (!url || !anonKey)) {
+  console.error(
+    "Configuração do Supabase ausente no build da Vercel. " +
+    "Defina SUPABASE_URL e SUPABASE_ANON_KEY em Project Settings > Environment Variables e faça um novo deploy."
+  );
+  process.exit(1);
+}
+
 if (/service_role/i.test(anonKey)) {
   console.error("⛔ A chave informada parece ser 'service_role'. Use SOMENTE a chave anon/publishable.");
   process.exit(1);

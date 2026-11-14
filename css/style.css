@@ -445,7 +445,7 @@ a:focus-visible {
 
 /* ================================================================ LAYOUT */
 .page-shell {
-  max-width: 77.5rem;
+  max-width: 100rem;
   margin: 0 auto;
   padding: 1.625rem 1.5rem 1.5rem;
 }
