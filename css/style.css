@@ -1053,6 +1053,10 @@ a:focus-visible {
   flex: 1;
 }
 
+.button-row + .button.full {
+  margin-top: 0.5625rem;
+}
+
 .button.danger {
   background: var(--red);
   color: var(--bg);
@@ -1876,6 +1880,17 @@ a:focus-visible {
 
   .management-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .rounds-panel .button-row {
+    gap: 0.375rem;
+  }
+
+  .rounds-panel .button-row .button {
+    gap: 0.25rem;
+    padding-inline: 0.5rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
   }
 }
 
