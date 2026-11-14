@@ -45,8 +45,13 @@ export function renderScore() {
   document.getElementById("player-count").textContent = `${state.players.length}/12`;
   document.getElementById("add-player").disabled = state.players.length >= 12;
 }
+// Limite defensivo: nenhuma partida de tabuleiro chega perto disso, mas evita
+// valores absurdos (ou manipulados) no placar e no documento salvo.
+const MAX_SCORE = 999_999;
+const clampScore = value => Math.max(-MAX_SCORE, Math.min(MAX_SCORE, Math.trunc(Number(value) || 0)));
+
 async function changeScore(player, delta) {
-  player.score += delta;
+  player.score = clampScore(player.score + delta);
   state.scoreHistory.unshift({ player_id: player.id, delta, round: state.round, created_at: new Date().toISOString() });
   scheduleSave(); renderScore();
   try { await updatePlayerScore(player.id, player.score, delta, state.round); } catch (e) { console.error(e); }

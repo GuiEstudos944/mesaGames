@@ -6,10 +6,14 @@ function openModal({ title, message, confirmText = "Confirmar", cancelText = "Ca
   if (activeCleanup) activeCleanup(false);
   const previous = document.activeElement;
   const id = `dialog-${Math.random().toString(36).slice(2)}`;
-  root.innerHTML = `<div class="modal-overlay" data-overlay><section class="modal-box" role="dialog" aria-modal="true" aria-labelledby="${id}-title" aria-describedby="${id}-message"><h3 id="${id}-title"></h3><p id="${id}-message"></p><div data-extra></div><div class="modal-actions"><button class="button secondary" data-cancel type="button">${cancelText}</button><button class="button ${danger ? "danger" : "primary"}" data-confirm type="button">${confirmText}</button></div></section></div>`;
+  // Estrutura fixa: nenhum dado dinâmico é interpolado em HTML (evita XSS).
+  // `id` é aleatório em hexadecimal e `danger` é booleano; todo texto entra
+  // depois por textContent. `title`/`message` são usados só em textContent.
+  root.innerHTML = `<div class="modal-overlay" data-overlay><section class="modal-box" role="dialog" aria-modal="true" aria-labelledby="${id}-title" aria-describedby="${id}-message"><h3 id="${id}-title"></h3><p id="${id}-message"></p><div data-extra></div><div class="modal-actions"><button class="button secondary" data-cancel type="button"></button><button class="button ${danger ? "danger" : "primary"}" data-confirm type="button"></button></div></section></div>`;
   const overlay = root.querySelector("[data-overlay]"), box = root.querySelector(".modal-box");
   root.querySelector("h3").textContent = title; root.querySelector("p").textContent = message;
   const extra = root.querySelector("[data-extra]"), cancel = root.querySelector("[data-cancel]"), confirm = root.querySelector("[data-confirm]");
+  cancel.textContent = cancelText; confirm.textContent = confirmText;
   if (input) {
     const field = document.createElement("input"); field.className = "modal-input"; field.value = input.value ?? ""; field.placeholder = input.placeholder ?? ""; field.maxLength = 60; field.setAttribute("aria-label", input.label || "Novo nome");
     extra.append(field); input.field = field;

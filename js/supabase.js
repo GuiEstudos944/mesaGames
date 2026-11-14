@@ -8,9 +8,12 @@ import {
 } from "./state.js";
 
 const SESSION_TABLE = "game_sessions";
+const ROOM_TABLE = "rooms";
+const ROOM_MEMBERS_TABLE = "room_members";
 const SYNC_DELAY = 700;          // debounce do auto-save
 const MAX_PAYLOAD = 200_000;     // ~200 KB: acima disso o histórico é reduzido
 const MAX_NAME = 60;
+const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem I, O, 0 e 1
 
 let client = null;
 if (SUPABASE_CONFIGURED) {
@@ -20,6 +23,7 @@ if (SUPABASE_CONFIGURED) {
 }
 
 let activeSessionId = null;
+let activeRoomId = null;
 let syncTimer = null;
 let syncing = false;
 let pendingAgain = false;
@@ -110,6 +114,8 @@ export async function updateProfile(preferences) {
 /**
  * Apelido do usuário. Fica no `user_metadata` do Supabase Auth, então funciona
  * mesmo antes de o SQL do banco ser executado e sobrevive a qualquer aparelho.
+ * Depois de gravar, sincroniza a cópia em `public.profiles` (usada para garantir
+ * apelidos únicos). Se as funções do SQL ainda não existirem, nada quebra.
  */
 export async function updateDisplayName(displayName) {
   if (!client) throw new Error("Supabase não configurado.");
@@ -117,7 +123,41 @@ export async function updateDisplayName(displayName) {
   if (!name) throw new Error("Informe um apelido.");
   const { data, error } = await client.auth.updateUser({ data: { display_name: name } });
   if (error) throw error;
+  try {
+    const { error: syncError } = await client.rpc("set_display_name", { p_name: name });
+    if (syncError && !isMissingFunction(syncError)) throw syncError;
+  } catch (syncError) {
+    if (!isMissingFunction(syncError)) throw syncError;
+  }
   return data?.user ?? null;
+}
+
+/* ------------------------------------------------- disponibilidade pública */
+/** `false` = já cadastrado; `true` = livre; `null` = não foi possível verificar. */
+function availabilityResult(data) { return data === true ? true : data === false ? false : null; }
+function isMissingFunction(error) {
+  const code = error?.code || "";
+  return code === "PGRST202" || code === "42883" || code === "404" || /could not find the function/i.test(String(error?.message || ""));
+}
+
+/** O e-mail já tem conta? Usado no cadastro para avisar antes de criar. */
+export async function checkEmailAvailable(email) {
+  if (!client) return null;
+  const value = String(email || "").trim();
+  if (!value) return null;
+  const { data, error } = await client.rpc("is_email_available", { p_email: value });
+  if (error) { if (isMissingFunction(error)) return null; throw error; }
+  return availabilityResult(data);
+}
+
+/** O apelido já está em uso? Usado no cadastro e ao salvar o apelido. */
+export async function checkNicknameAvailable(name) {
+  if (!client) return null;
+  const value = String(name || "").trim();
+  if (!value) return null;
+  const { data, error } = await client.rpc("is_nickname_available", { p_name: value });
+  if (error) { if (isMissingFunction(error)) return null; throw error; }
+  return availabilityResult(data);
 }
 
 /* ---------------------------------------------------------------- partidas */
@@ -175,9 +215,132 @@ function cleanName(name) {
   return value || "Nova partida";
 }
 
+/* ------------------------------------------------------------------- salas */
+/** Código curto e legível (sem I, O, 0 e 1) para compartilhar a sala. */
+function newRoomCode(length = 6) {
+  const bytes = new Uint8Array(length);
+  if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(bytes);
+  else for (let i = 0; i < length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, byte => ROOM_CODE_ALPHABET[byte % ROOM_CODE_ALPHABET.length]).join("");
+}
+
+/** Salas públicas abertas, já com a contagem de jogadores. */
+export async function listPublicRooms() {
+  if (!client) return [];
+  const { data, error } = await client.rpc("list_public_rooms");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Cria a sala e já coloca o criador como host. */
+export async function createRoom({ name, isPublic = true }) {
+  if (!client) throw new Error("Supabase não configurado.");
+  const user = await getCurrentUser();
+  if (!user) throw new Error("É preciso estar conectado para criar salas.");
+  let lastError = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data, error } = await client.from(ROOM_TABLE)
+      .insert({ code: newRoomCode(), name: cleanName(name), host_id: user.id, is_public: Boolean(isPublic) })
+      .select("id,code,name,host_id,is_public")
+      .single();
+    if (!error) {
+      const { error: memberError } = await client.from(ROOM_MEMBERS_TABLE)
+        .insert({ room_id: data.id, user_id: user.id, role: "host" });
+      if (memberError) {
+        await client.from(ROOM_TABLE).delete().eq("id", data.id);
+        throw memberError;
+      }
+      return data;
+    }
+    lastError = error;
+    if (error.code !== "23505") break; // só repete quando o código sorteado colide
+  }
+  throw lastError ?? new Error("Não foi possível criar a sala.");
+}
+
+/** Entra por código (funciona também em salas privadas). Devolve o id da sala. */
+export async function joinRoomByCode(code) {
+  if (!client) throw new Error("Supabase não configurado.");
+  const { data, error } = await client.rpc("join_room_by_code", { p_code: String(code || "").trim().toUpperCase() });
+  if (error) throw error;
+  return data;
+}
+
+/** Entra em uma sala pública listada. */
+export async function joinPublicRoom(id) {
+  if (!client) throw new Error("Supabase não configurado.");
+  const user = await getCurrentUser();
+  if (!user) throw new Error("É preciso estar conectado para entrar em salas.");
+  const { error } = await client.from(ROOM_MEMBERS_TABLE)
+    .upsert({ room_id: id, user_id: user.id, role: "guest", last_seen: new Date().toISOString() },
+      { onConflict: "room_id,user_id", ignoreDuplicates: true });
+  if (error) throw error;
+  return id;
+}
+
+export async function loadRoom(id) {
+  if (!client) return null;
+  const { data, error } = await client.from(ROOM_TABLE)
+    .select("id,code,name,host_id,is_public,status,state,revision,updated_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+export async function saveRoomState(id, stateDoc) {
+  if (!client) return null;
+  const { data, error } = await client.from(ROOM_TABLE)
+    .update({ state: stateDoc })
+    .eq("id", id)
+    .select("revision")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Sala não encontrada ou sem permissão de escrita.");
+  return data;
+}
+
+export async function listRoomMembers(id) {
+  if (!client) return [];
+  const { data, error } = await client.rpc("list_room_members", { p_room_id: id });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Remove a participação do usuário (convidado saindo). */
+export async function leaveRoom(id) {
+  if (!client) return;
+  const user = await getCurrentUser();
+  if (!user) return;
+  const { error } = await client.from(ROOM_MEMBERS_TABLE).delete().eq("room_id", id).eq("user_id", user.id);
+  if (error) throw error;
+}
+
+/** Encerra a sala (só o host consegue) — apaga membros em cascata. */
+export async function closeRoom(id) {
+  if (!client) throw new Error("Supabase não configurado.");
+  const { error } = await client.from(ROOM_TABLE).delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Escuta mudanças da sala (estado e jogadores) e devolve a função para cancelar. */
+export function subscribeRoom(id, handlers = {}) {
+  if (!client) return () => {};
+  const channel = client.channel(`mesa-room-${id}`);
+  channel
+    .on("postgres_changes", { event: "*", schema: "public", table: ROOM_TABLE, filter: `id=eq.${id}` },
+      payload => handlers.onRoomChange?.(payload))
+    .on("postgres_changes", { event: "*", schema: "public", table: ROOM_MEMBERS_TABLE, filter: `room_id=eq.${id}` },
+      payload => handlers.onMembersChange?.(payload))
+    .subscribe(status => { try { handlers.onStatus?.(status); } catch (error) { console.warn(error); } });
+  return () => { try { client.removeChannel(channel); } catch { /* canal já removido */ } };
+}
+
 /* ------------------------------------------------------- sincronização ------------------------------------------------------ */
 export function getActiveSessionId() { return activeSessionId; }
 export function setActiveSessionId(id) { activeSessionId = id || null; }
+export function getActiveRoomId() { return activeRoomId; }
+export function setActiveRoomId(id) { activeRoomId = id || null; }
 
 function buildPayload() {
   const doc = snapshot();
@@ -197,7 +360,8 @@ export function scheduleSync() {
 export async function syncNow() {
   if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
   if (!client) { emitSyncStatus("local"); return false; }
-  if (!activeSessionId) { emitSyncStatus("local"); return false; }
+  const target = activeRoomId || activeSessionId;
+  if (!target) { emitSyncStatus("local"); return false; }
   if (typeof navigator !== "undefined" && navigator.onLine === false) { emitSyncStatus("offline"); return false; }
   if (syncing) { pendingAgain = true; return false; }
 
@@ -209,7 +373,9 @@ export async function syncNow() {
   emitSyncStatus("saving");
   try {
     const payload = buildPayload();
-    await saveGameSessionState(activeSessionId, payload);
+    // Dentro de uma sala o documento vai para a sala; fora dela, para a partida.
+    if (activeRoomId) await saveRoomState(activeRoomId, payload);
+    else await saveGameSessionState(activeSessionId, payload);
     markClean();
     persistLocal();
     emitSyncStatus("saved");
@@ -226,7 +392,7 @@ export async function syncNow() {
 /** Garante que nada pendente se perca antes de trocar de partida. */
 export async function flushPendingSync() {
   if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
-  if (state.dirty && activeSessionId) await syncNow();
+  if (state.dirty && (activeRoomId || activeSessionId)) await syncNow();
 }
 
 /**
@@ -240,6 +406,8 @@ export async function openSession(id) {
   const remote = await loadGameSession(id);
   if (!remote) throw new Error("Partida não encontrada ou sem permissão de acesso.");
 
+  // Abrir uma partida salva significa sair de qualquer sala online.
+  activeRoomId = null;
   setActiveSessionId(id);
   setLocalScope(id);
 
@@ -272,12 +440,12 @@ export async function openSession(id) {
 }
 
 /** Sai da conta mantendo o rascunho local do escopo anônimo. */
-export function leaveRemoteSession() { activeSessionId = null; }
+export function leaveRemoteSession() { activeSessionId = null; activeRoomId = null; }
 
 if (typeof window !== "undefined") {
   window.addEventListener("offline", () => emitSyncStatus("offline"));
   window.addEventListener("online", () => {
-    if (!activeSessionId) return;
+    if (!activeRoomId && !activeSessionId) return;
     if (state.dirty) scheduleSync(); else syncNow();
   });
 }

@@ -1,12 +1,13 @@
 // Configuração pública do MesaGames.
 //
-// A chave `anon` / `publishable` do Supabase é PÚBLICA por design: ela só permite
-// o que as políticas de RLS autorizarem. NUNCA coloque a `service_role` aqui.
+// NENHUM valor real (URL, chave, e-mail) fica escrito neste arquivo. Tudo vem
+// de variáveis de ambiente, injetadas em `js/env.js` pelo script
+// `scripts/generate-config.mjs` (rode antes do deploy — a Vercel já faz isso no
+// Build Command).
 //
-// Estes valores podem ser sobrescritos sem editar este arquivo:
-//   1. por `globalThis.MESAGAMES_ENV` (injetado antes deste módulo), ou
-//   2. gerando este arquivo a partir de variáveis de ambiente:
-//      `node scripts/generate-config.mjs` (ver README > Variáveis de ambiente).
+// A chave `anon` / `publishable` do Supabase é PÚBLICA por design: ela só
+// permite o que as políticas de RLS autorizarem. A segurança NÃO depende de
+// escondê-la. NUNCA coloque a `service_role` (ou qualquer chave secreta) aqui.
 const injected = globalThis.MESAGAMES_ENV || {};
 
 function normalizeUrl(value) {
@@ -16,15 +17,18 @@ function normalizeUrl(value) {
     .replace(/\/rest\/v1$/, ""); // aceita URL colada com "/rest/v1"
 }
 
-export const SUPABASE_URL = normalizeUrl(injected.SUPABASE_URL || "https://xhqtzhceevzficoaknzv.supabase.co");
-export const SUPABASE_ANON_KEY = String(injected.SUPABASE_ANON_KEY || "sb_publishable_yM1AZOraM19MohArVk4D3Q_ogbgx_Os").trim();
+export const SUPABASE_URL = normalizeUrl(injected.SUPABASE_URL || "");
+export const SUPABASE_ANON_KEY = String(injected.SUPABASE_ANON_KEY || "").trim();
 
 // Para onde o Supabase devolve o usuário após confirmar e-mail / redefinir senha.
-// Precisa estar na lista "Redirect URLs" do projeto Supabase.
-export const AUTH_REDIRECT_URL = String(injected.AUTH_REDIRECT_URL || `${location.origin}${location.pathname}`);
+// Precisa estar na lista "Redirect URLs" do projeto Supabase. Sem valor, usa a
+// própria origem onde o site está aberto (funciona em localhost e em produção).
+export const AUTH_REDIRECT_URL = String(injected.AUTH_REDIRECT_URL || "").trim()
+  || `${location.origin}${location.pathname}`;
 
 export const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 // Único e-mail autorizado a ver a seção "Configurações / Dados e Banco".
-// Todo o resto do app funciona para qualquer conta.
-export const ADMIN_EMAIL = "guilhermebolsoni2004@gmail.com";
+// Vem da variável de ambiente ADMIN_EMAIL. Vazio = a seção não aparece para
+// ninguém. Atenção: esta checagem é apenas visual (ver README > Segurança).
+export const ADMIN_EMAIL = String(injected.ADMIN_EMAIL || "").trim();

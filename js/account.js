@@ -4,26 +4,45 @@ import { state, setLocalScope, loadLocalState, resetGameState, readLocalSnapshot
 import { toast, confirmarModal, editarNomeModal, setConnectionStatus, setSessionPill } from "./modal.js";
 import * as api from "./supabase.js";
 import { ADMIN_EMAIL } from "./config.js";
+import { initRooms, refreshRoomsPanel, resetRooms } from "./rooms.js";
 
 const LAST_SESSION_KEY = "mesa-last-session-v1";
 const MIN_PASSWORD = 6;
+const CHECK_DELAY = 450;         // espera antes de consultar disponibilidade
 
 let currentUser = null;
 let sessions = [];
 let refreshing = false;
 let busy = false;
+let checkTimer = null;
 
 const $ = id => document.getElementById(id);
 const show = (el, visible) => { if (el) el.hidden = !visible; };
 
 /* ------------------------------------------------------------------- views */
-function openDialog() { const dialog = $("account-dialog"); if (dialog) dialog.hidden = false; }
+function openDialog() {
+  const dialog = $("account-dialog");
+  if (dialog) dialog.hidden = false;
+  // Se o diálogo abrir já na aba de salas, garante uma lista atualizada.
+  if ($("account-rooms-view") && !$("account-rooms-view").hidden) refreshRoomsPanel().catch(error => console.error(error));
+}
 function closeDialog() { const dialog = $("account-dialog"); if (dialog) dialog.hidden = true; }
 function message(text, error = false) {
   const el = $("account-message");
   if (!el) return;
   el.textContent = text;
   el.className = error ? "account-message error" : "account-message";
+}
+/** Alterna entre a aba "Conta" e a aba "Salas online". */
+function showAccountTab(tab) {
+  const rooms = tab === "rooms";
+  show($("account-pane"), !rooms);
+  show($("account-rooms-view"), rooms);
+  $("account-tab-account").classList.toggle("active", !rooms);
+  $("account-tab-rooms").classList.toggle("active", rooms);
+  $("account-tab-account").setAttribute("aria-selected", String(!rooms));
+  $("account-tab-rooms").setAttribute("aria-selected", String(rooms));
+  if (rooms) refreshRoomsPanel().catch(error => console.error(error));
 }
 function showAuthView() {
   show($("account-auth-view"), true);
@@ -100,6 +119,7 @@ function showSignedOut() {
   currentUser = null;
   sessions = [];
   api.leaveRemoteSession();
+  resetRooms();
   setLocalScope("local");
   if (!loadLocalState()) resetGameState();
   $("account-label").textContent = "Entrar";
@@ -113,7 +133,43 @@ function showSignedOut() {
   setConnectionStatus("offline", "Local · sem conta");
   setSessionPill("SESSÃO LOCAL");
   showAuthView();
+  refreshRoomsPanel().catch(error => console.error(error));
   notifySessionLoaded(null);
+}
+
+/* ------------------------------------------------ disponibilidade de cadastro */
+/** Consulta o banco: true = livre, false = já usado, null = não foi possível. */
+async function checkAvailability(kind, value) {
+  try {
+    return kind === "email" ? await api.checkEmailAvailable(value) : await api.checkNicknameAvailable(value);
+  } catch (error) {
+    console.warn(error);
+    return null; // banco sem as funções novas: não bloqueia o cadastro
+  }
+}
+
+function availabilityMessages(kind, available) {
+  const taken = kind === "email" ? "Este e-mail já está cadastrado." : "Este apelido já está em uso.";
+  const free = kind === "email" ? "E-mail disponível." : "Apelido disponível.";
+  return available === false ? [taken, true] : [free, false];
+}
+
+/** Avisa enquanto o usuário digita se o e-mail/apelido já está em uso. */
+function bindAvailability(inputId, kind) {
+  const input = $(inputId);
+  if (!input) return;
+  input.addEventListener("input", () => {
+    clearTimeout(checkTimer);
+    const value = input.value.trim();
+    if (!value) { message(""); return; }
+    checkTimer = setTimeout(async () => {
+      // Só avisa no cadastro: ao entrar, um e-mail já cadastrado é o esperado.
+      if ($("auth-submit").dataset.mode !== "signup") return;
+      const available = await checkAvailability(kind, value);
+      if (available === null || input.value.trim() !== value) return;
+      message(...availabilityMessages(kind, available));
+    }, CHECK_DELAY);
+  });
 }
 
 /* ----------------------------------------------------------------- partidas */
@@ -183,8 +239,15 @@ function bindUi() {
     if (event.key === "Escape" && !$("account-dialog").hidden) closeDialog();
   });
 
+  $("account-tab-account").addEventListener("click", () => showAccountTab("account"));
+  $("account-tab-rooms").addEventListener("click", () => showAccountTab("rooms"));
+
   $("auth-mode-signup").addEventListener("click", () => setMode("signup"));
   $("auth-mode-login").addEventListener("click", () => setMode("login"));
+
+  // Aviso em tempo real: e-mail/apelido já em uso durante o cadastro.
+  bindAvailability("auth-email", "email");
+  bindAvailability("auth-name", "nickname");
 
   $("auth-forgot").addEventListener("click", async () => {
     const email = $("auth-email").value.trim();
@@ -207,9 +270,17 @@ function bindUi() {
 
   $("save-profile").addEventListener("click", async () => {
     if (busy) return;
+    const name = $("profile-name").value.trim();
+    if (!name) return toast("Informe um apelido.", "error");
+    const current = String(currentUser?.user_metadata?.display_name || "").trim();
     busy = true;
     try {
-      await api.updateDisplayName($("profile-name").value);
+      // Só consulta o banco quando o apelido realmente muda (o próprio vale).
+      if (name.toLowerCase() !== current.toLowerCase()) {
+        const available = await checkAvailability("nickname", name);
+        if (available === false) { toast("Este apelido já está em uso.", "error"); return; }
+      }
+      await api.updateDisplayName(name);
       currentUser = await api.getCurrentUser();
       $("account-label").textContent = userLabel();
       $("profile-name").value = currentUser?.user_metadata?.display_name || "";
@@ -227,6 +298,7 @@ function bindUi() {
     const name = $("auth-name").value.trim();
     const mode = $("auth-submit").dataset.mode;
     if (!email || !password) return message("Preencha e-mail e senha.", true);
+    if (mode === "signup" && !name) return message("Escolha um apelido para os outros jogadores te identificarem.", true);
     if (password.length < MIN_PASSWORD) return message(`A senha precisa ter pelo menos ${MIN_PASSWORD} caracteres.`, true);
 
     busy = true;
@@ -234,8 +306,20 @@ function bindUi() {
     message(mode === "signup" ? "Criando conta…" : "Entrando…");
     try {
       if (mode === "signup") {
+        // Avisa antes de criar: e-mail já cadastrado e apelido já usado.
+        if (await checkAvailability("nickname", name) === false) {
+          message("Este apelido já está em uso. Escolha outro.", true);
+          return;
+        }
+        if (await checkAvailability("email", email) === false) {
+          message("Este e-mail já está cadastrado. Entre na conta ou recupere a senha.", true);
+          return;
+        }
         const result = await api.signUp(email, password, name);
-        if (!result?.session) {
+        if (result?.user && Array.isArray(result.user.identities) && result.user.identities.length === 0) {
+          // O Supabase não revela o motivo, mas identidades vazias = e-mail já existe.
+          message("Este e-mail já está cadastrado. Entre na conta ou recupere a senha.", true);
+        } else if (!result?.session) {
           // Confirmação de e-mail ligada: a conta existe, mas ainda não há sessão.
           message("Conta criada! Confirme o e-mail que enviamos para ativar o acesso.");
           toast("Conta criada. Confirme o e-mail para liberar a sincronização.", "error", 6000);
@@ -449,6 +533,7 @@ async function refreshAccount() {
 
 export function initAccount() {
   bindUi();
+  initRooms();
   setMode("signup");
 
   if (!api.isSupabaseConfigured()) {

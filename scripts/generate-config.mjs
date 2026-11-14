@@ -44,16 +44,26 @@ const pick = key => (process.env[key] ?? fileEnv[key] ?? "").trim();
 const url = pick("SUPABASE_URL");
 const anonKey = pick("SUPABASE_ANON_KEY");
 const redirect = pick("AUTH_REDIRECT_URL");
+const adminEmail = pick("ADMIN_EMAIL");
 
 if (/service_role/i.test(anonKey)) {
   console.error("⛔ A chave informada parece ser 'service_role'. Use SOMENTE a chave anon/publishable.");
   process.exit(1);
 }
 
+// Nenhuma variável pode carregar um segredo do Supabase para o front-end.
+for (const [key, value] of [["SUPABASE_URL", url], ["SUPABASE_ANON_KEY", anonKey], ["ADMIN_EMAIL", adminEmail]]) {
+  if (/service_role|secret|private_key/i.test(value)) {
+    console.error(`⛔ A variável ${key} parece conter um segredo. Só valores PÚBLICOS podem ir para o front-end.`);
+    process.exit(1);
+  }
+}
+
 const env = {};
 if (url) env.SUPABASE_URL = url;
 if (anonKey) env.SUPABASE_ANON_KEY = anonKey;
 if (redirect) env.AUTH_REDIRECT_URL = redirect;
+if (adminEmail) env.ADMIN_EMAIL = adminEmail;
 
 const body = `// Arquivo gerado por scripts/generate-config.mjs — não edite manualmente.
 // Contém apenas a chave PÚBLICA do Supabase (anon / publishable).
