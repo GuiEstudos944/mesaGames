@@ -15,7 +15,7 @@ function openModal({ title, message, confirmText = "Confirmar", cancelText = "Ca
   const extra = root.querySelector("[data-extra]"), cancel = root.querySelector("[data-cancel]"), confirm = root.querySelector("[data-confirm]");
   cancel.textContent = cancelText; confirm.textContent = confirmText;
   if (input) {
-    const field = document.createElement("input"); field.className = "modal-input"; field.value = input.value ?? ""; field.placeholder = input.placeholder ?? ""; field.maxLength = 60; field.setAttribute("aria-label", input.label || "Novo nome");
+    const field = document.createElement("input"); field.className = "modal-input"; field.value = input.value ?? ""; field.placeholder = input.placeholder ?? ""; field.maxLength = input.maxLength ?? 60; field.setAttribute("aria-label", input.label || "Novo nome");
     extra.append(field); input.field = field;
   }
   if (requireWord) {
@@ -72,7 +72,8 @@ export async function editarNomeModal(currentName, options = {}) {
   const input = {
     value: currentName,
     placeholder: options.placeholder || "Nome do jogador",
-    label: options.label || "Nome do jogador"
+    label: options.label || "Nome do jogador",
+    maxLength: options.maxLength ?? 60
   };
   const promise = openModal({
     title: options.title || "Editar jogador",

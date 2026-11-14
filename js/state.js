@@ -79,7 +79,7 @@ export function applySnapshot(data) {
   if (Array.isArray(data.players) && data.players.length) {
     state.players = data.players.map((p, i) => ({
       id: typeof p?.id === "string" && p.id ? p.id : makeId(),
-      name: String(p?.name ?? `Jogador ${i + 1}`).slice(0, 40),
+      name: String(p?.name ?? `Jogador ${i + 1}`).slice(0, 20),
       score: Number.isFinite(Number(p?.score)) ? Math.trunc(Number(p.score)) : 0,
       color: typeof p?.color === "string" && p.color ? p.color : COLORS[i % COLORS.length]
     }));

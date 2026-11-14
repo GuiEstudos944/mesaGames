@@ -634,12 +634,255 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 9. CONFERÊNCIA (rode depois para confirmar que está tudo certo)
+-- 9. SEGURANÇA ADMINISTRATIVA
 -- ---------------------------------------------------------------------------
--- select tablename, rowsecurity from pg_tables
+-- A proteção real fica NO BANCO (RLS + funções SECURITY DEFINER). O front-end
+-- só esconde os botões por conveniência; aqui é onde o acesso é realmente
+-- negado para qualquer conta que não seja a do administrador.
+--
+-- Regra de ouro: só o e-mail guilhermebolsoni2004@gmail.com (com e-mail
+-- confirmado) é considerado administrador. Qualquer outra conta — logada ou
+-- anônima — não consegue executar nenhuma ação administrativa ou destrutiva.
+-- ---------------------------------------------------------------------------
+
+-- 9.1 Função que identifica o administrador.
+--     SECURITY DEFINER: roda com os privilégios do dono (postgres), então
+--     consegue ler auth.users mesmo que a role do chamador não possa.
+--     STABLE + search_path fixo: evita surpresas de resolução de nomes.
+create or replace function public.is_admin()
+returns boolean
+language plpgsql
+security definer
+stable
+set search_path = public, auth
+as $$
+declare
+  v_email    text := lower(btrim(coalesce(auth.jwt() ->> 'email', '')));
+  v_verified boolean := (auth.jwt() ->> 'email_verified')::boolean;
+begin
+  -- Sem e-mail no JWT = visitante anônimo.
+  if v_email = '' then
+    return false;
+  end if;
+  -- O e-mail tem que ser exatamente o do administrador (comparação em minúsculas).
+  if v_email <> 'guilhermebolsoni2004@gmail.com' then
+    return false;
+  end if;
+  -- O e-mail precisa estar confirmado.
+  if v_verified is true then
+    return true;
+  end if;
+  -- Fallback: se o claim não veio no JWT, confere direto na tabela de usuários.
+  return exists (
+    select 1 from auth.users u
+    where lower(u.email) = v_email
+      and u.email_confirmed_at is not null
+  );
+end;
+$$;
+
+-- Ninguém além do authenticated executa is_admin(). Mesmo assim a função é
+-- segura porque só devolve true/false, nunca dados.
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+-- 9.2 FORCE ROW LEVEL SECURITY em todas as tabelas.
+--     Com FORCE, até o dono da tabela respeita as policies (evita que uma
+--     função SECURITY DEFINER mal escrita burle o RLS por acidente).
+alter table public.profiles force row level security;
+alter table public.game_sessions force row level security;
+alter table public.rooms force row level security;
+alter table public.room_members force row level security;
+
+-- Tabelas legadas (v1) também recebem FORCE RLS (RLS já estava ligado sem
+-- políticas, então o acesso já era negado; agora fica negado com FORCE também).
+do $$
+declare
+  legacy text;
+begin
+  foreach legacy in array array['players', 'game_state', 'dice_rolls', 'score_history'] loop
+    if to_regclass('public.' || legacy) is not null then
+      execute format('alter table public.%I force row level security', legacy);
+    end if;
+  end loop;
+end;
+$$;
+
+-- 9.3 Revoga TUDO de anon e authenticated, depois concede só o necessário.
+--     Tabelas sem GRANT para uma operação ficam inacessíveis (defesa em
+--     profundidade, além do RLS).
+revoke all on public.profiles from anon, authenticated;
+revoke all on public.game_sessions from anon, authenticated;
+revoke all on public.rooms from anon, authenticated;
+revoke all on public.room_members from anon, authenticated;
+
+-- Perfis: cada usuário vê/cria/edita o próprio.
+grant select, insert, update on public.profiles to authenticated;
+
+-- Partidas: cada usuário gerencia as próprias.
+grant select, insert, update, delete on public.game_sessions to authenticated;
+
+-- Salas: usuários logados listam/entram/criam; o RLS restringe o quê cada um vê.
+grant select, insert, update, delete on public.rooms to authenticated;
+grant select, insert, update, delete on public.room_members to authenticated;
+
+-- Uso normal das sequences (se existirem) — necessário para inserts com default.
+revoke all on all sequences in schema public from public;
+grant usage, select on all sequences in schema public to authenticated;
+
+-- 9.4 FUNÇÕES RPC ADMINISTRATIVAS (operações destrutivas).
+--     Todas são SECURITY DEFINER (para poder tocar as tabelas mesmo com RLS)
+--     e começam verificando is_admin(). Se não for admin, levantam exceção.
+--     EXECUTE é revogado de PUBLIC/anon e concedido apenas a authenticated.
+--     Mesmo um authenticated que não seja admin recebe "acesso negado".
+
+-- Limpa o histórico de rolagens de dados (tabela legada dice_rolls).
+create or replace function public.limpar_historico_dados()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'acesso negado';
+  end if;
+  if to_regclass('public.dice_rolls') is not null then
+    delete from public.dice_rolls;
+  end if;
+end;
+$$;
+
+-- Zera a pontuação de todos os jogadores (tabela legada players).
+create or replace function public.zerar_pontos()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'acesso negado';
+  end if;
+  if to_regclass('public.players') is not null then
+    update public.players set score = 0;
+  end if;
+end;
+$$;
+
+-- Volta a partida para a rodada 1 (tabela legada game_state).
+create or replace function public.resetar_rodadas()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'acesso negado';
+  end if;
+  if to_regclass('public.game_state') is not null then
+    update public.game_state set round = 1, turn = 1, starter_index = 0;
+  end if;
+end;
+$$;
+
+-- Limpa TODAS as tabelas legadas de uma vez (jogadores, estado, dados, histórico).
+create or replace function public.limpar_tudo()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'acesso negado';
+  end if;
+  if to_regclass('public.dice_rolls') is not null then
+    truncate public.dice_rolls restart identity cascade;
+  end if;
+  if to_regclass('public.score_history') is not null then
+    truncate public.score_history restart identity cascade;
+  end if;
+  if to_regclass('public.players') is not null then
+    truncate public.players restart identity cascade;
+  end if;
+  if to_regclass('public.game_state') is not null then
+    truncate public.game_state restart identity cascade;
+  end if;
+end;
+$$;
+
+-- Exporta todos os dados das tabelas legadas em JSON (só admin).
+create or replace function public.exportar_tudo()
+returns jsonb
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  v_result jsonb := '{}'::jsonb;
+begin
+  if not public.is_admin() then
+    raise exception 'acesso negado';
+  end if;
+  if to_regclass('public.players') is not null then
+    v_result := v_result || jsonb_build_object('players',
+      coalesce((select jsonb_agg(p) from public.players p), '[]'::jsonb));
+  end if;
+  if to_regclass('public.game_state') is not null then
+    v_result := v_result || jsonb_build_object('game_state',
+      coalesce((select jsonb_agg(g) from public.game_state g), '[]'::jsonb));
+  end if;
+  if to_regclass('public.dice_rolls') is not null then
+    v_result := v_result || jsonb_build_object('dice_rolls',
+      coalesce((select jsonb_agg(d) from public.dice_rolls d), '[]'::jsonb));
+  end if;
+  if to_regclass('public.score_history') is not null then
+    v_result := v_result || jsonb_build_object('score_history',
+      coalesce((select jsonb_agg(s) from public.score_history s), '[]'::jsonb));
+  end if;
+  return v_result;
+end;
+$$;
+
+-- Permissões das RPCs administrativas: só authenticated pode chamar, e o
+-- is_admin() dentro da função bloqueia quem não for o administrador.
+revoke all on function public.limpar_historico_dados() from public;
+revoke all on function public.zerar_pontos() from public;
+revoke all on function public.resetar_rodadas() from public;
+revoke all on function public.limpar_tudo() from public;
+revoke all on function public.exportar_tudo() from public;
+grant execute on function public.limpar_historico_dados() to authenticated;
+grant execute on function public.zerar_pontos() to authenticated;
+grant execute on function public.resetar_rodadas() to authenticated;
+grant execute on function public.limpar_tudo() to authenticated;
+grant execute on function public.exportar_tudo() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 10. CONFERÊNCIA E TESTES (rode depois para confirmar que está tudo certo)
+-- ---------------------------------------------------------------------------
+-- Verifica RLS e policies:
+-- select tablename, rowsecurity, forcerowsecurity from pg_tables
 --   where schemaname = 'public' order by tablename;
 -- select tablename, policyname, roles, cmd from pg_policies
 --   where schemaname = 'public' order by tablename, policyname;
 --
 -- Teste de isolamento (rode com a chave anon do frontend, sem sessão):
 --   select * from public.game_sessions;   -- deve retornar 0 linhas
+--   select public.is_admin();             -- deve falhar (anon não tem EXECUTE)
+--   select public.limpar_tudo();          -- deve falhar (anon não tem EXECUTE)
+--
+-- Teste como OUTRO usuário autenticado (não admin):
+--   select public.is_admin();             -- deve retornar false
+--   select public.limpar_tudo();          -- deve levantar "acesso negado"
+--   select public.exportar_tudo();        -- deve levantar "acesso negado"
+--
+-- Teste como ADMIN (guilhermebolsoni2004@gmail.com, e-mail confirmado):
+--   select public.is_admin();             -- deve retornar true
+--   select public.limpar_historico_dados();  -- funciona
+--   select public.zerar_pontos();             -- funciona
+--   select public.resetar_rodadas();          -- funciona
+--   select public.exportar_tudo();            -- funciona
+--   select public.limpar_tudo();              -- funciona (apaga TUDO das legadas)

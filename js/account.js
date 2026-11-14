@@ -104,10 +104,20 @@ function userLabel() {
   return local || "Conta";
 }
 
-/** A seção "Configurações / Dados e Banco" é exclusiva desta conta. */
-function isAdmin() {
-  const email = currentUser?.email;
-  return Boolean(email) && String(email).toLowerCase() === ADMIN_EMAIL.toLowerCase();
+/**
+ * A seção "Configurações / Dados e Banco" é exclusiva desta conta.
+ * Para ser admin é preciso:
+ *   1. estar logado (currentUser existe);
+ *   2. o e-mail ser exatamente o definido em ADMIN_EMAIL (comparação em minúsculas);
+ *   3. o e-mail estar confirmado (email_confirmed_at preenchido).
+ * Esta checagem é apenas conveniência visual — a proteção real está no RLS do banco.
+ */
+export function isAdmin() {
+  const user = currentUser;
+  if (!user) return false;
+  const email = String(user.email || "").toLowerCase();
+  const confirmed = Boolean(user.email_confirmed_at);
+  return email === ADMIN_EMAIL.toLowerCase() && confirmed;
 }
 /** Fora da conta do administrador a seção nem aparece — nenhum aviso é emitido. */
 function applyAdminVisibility() {

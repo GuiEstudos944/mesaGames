@@ -5,12 +5,19 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
 
 # Config gerada a partir do .env (contém os valores acima injetados)
 /js/env.js
 
 # Vercel
 .vercel
+
+# Chaves e certificados — NUNCA versionados
+*.pem
+*.key
+*.crt
 
 # Logs e arquivos de sistema
 *.log

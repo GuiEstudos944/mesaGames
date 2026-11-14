@@ -1,6 +1,6 @@
 // Camada Supabase: autenticação, partidas por usuário e sincronização com debounce.
 // A segurança real é aplicada no banco (RLS) — aqui só usamos a chave pública.
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.2/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_CONFIGURED, AUTH_REDIRECT_URL } from "./config.js";
 import {
   state, snapshot, applySnapshot, markClean, markDirty, touch,

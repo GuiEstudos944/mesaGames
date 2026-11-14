@@ -5,7 +5,7 @@ import { initTimer } from "./timer.js";
 import { initDice, renderDiceHistory } from "./dice.js";
 import { confirmarModal, toast, informativoModal, setConnectionStatus, setSessionPill } from "./modal.js";
 import { isSupabaseConfigured, scheduleSync, setSyncStatusListener } from "./supabase.js";
-import { initAccount } from "./account.js";
+import { initAccount, isAdmin } from "./account.js";
 
 // Painéis que o usuário pode exibir ou ocultar em "Personalizar painéis".
 const PANELS = [
@@ -26,15 +26,38 @@ const STATUS = {
 
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
+  document.documentElement.style.colorScheme = state.theme;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = state.theme === "dark" ? "#11131a" : "#f2f4f7";
+  if (meta) meta.content = state.theme === "dark" ? "#191D27" : "#f2f4f7";
+  // role="switch": aria-checked reflete o estado (true = claro, já que o switch "liga" o claro).
+  const toggle = document.getElementById("theme-toggle");
+  if (toggle) toggle.setAttribute("aria-checked", state.theme === "light" ? "true" : "false");
+  // Persiste a preferência para o script do <head> aplicar antes do paint.
+  try { globalThis.localStorage?.setItem("mesagames_theme", state.theme); } catch { /* storage indisponível */ }
 }
 function initTheme() {
-  document.getElementById("theme-toggle").addEventListener("click", () => {
+  // Sincroniza o estado com o tema que o script do <head> já aplicou (evita FOUC).
+  const headTheme = document.documentElement.getAttribute("data-theme");
+  if (headTheme === "light" || headTheme === "dark") state.theme = headTheme;
+  applyTheme();
+
+  const toggle = document.getElementById("theme-toggle");
+  const toggleTheme = () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
+    toggle.classList.add("is-toggling");
     applyTheme();
     saveLocalState();
     scheduleSync();
+    window.setTimeout(() => toggle.classList.remove("is-toggling"), 600);
+  };
+  toggle.addEventListener("click", toggleTheme);
+  // role="switch": Enter e Espaço acionam o botão (comportamento padrão de <button>),
+  // mas garantimos que Espaço não faça scroll da página.
+  toggle.addEventListener("keydown", (event) => {
+    if (event.key === " " || event.key === "Spacebar" || event.key === "Enter") {
+      event.preventDefault();
+      toggleTheme();
+    }
   });
 }
 function renderAll() {
@@ -128,7 +151,23 @@ async function runManagedAction(button, action) {
 }
 
 function initManagement() {
+  // Ações destrutivas e exportação são exclusivas do administrador.
+  // O painel já fica oculto para quem não é admin (applyAdminVisibility), mas
+  // esta verificação é a defesa em profundidade: se alguém acionar o botão
+  // pelo console ou por um link quebrado, recebe o modal de acesso restrito.
+  const requireAdmin = async () => {
+    if (!isAdmin()) {
+      await informativoModal(
+        "Acesso restrito",
+        "Esta operação é exclusiva do administrador. Entre com a conta autorizada para continuar."
+      );
+      return false;
+    }
+    return true;
+  };
+
   document.querySelectorAll("[data-action]").forEach(button => button.addEventListener("click", () => runManagedAction(button, async () => {
+    if (!await requireAdmin()) return;
     const configs = {
       "clear-dice": { title: "Limpar histórico de dados?", message: "Todas as rolagens salvas serão apagadas.", confirmText: "Limpar" },
       "clear-score-history": { title: "Limpar histórico de pontuação?", message: "O registro de alterações de pontos será apagado.", confirmText: "Limpar" },
@@ -153,7 +192,8 @@ function initManagement() {
     toast("Operação concluída com sucesso.");
   })));
 
-  document.getElementById("export-json").addEventListener("click", () => {
+  document.getElementById("export-json").addEventListener("click", async () => {
+    if (!await requireAdmin()) return;
     const payload = {
       exported_at: new Date().toISOString(),
       players: state.players,
@@ -199,10 +239,56 @@ async function init() {
 
   await initAccount();
   renderAll();
+  hideLoader();
+}
+
+/* ------------------------------------------------------------- loader */
+// Remove o loader de carregamento quando a página + conta/Supabase estiverem prontos.
+// Respeita tempo mínimo de 600ms e máximo de 4s (fallback do localStorage).
+const LOADER_MIN_MS = 600;
+const LOADER_MAX_MS = 4000;
+const loaderStart = Date.now();
+let loaderHidden = false;
+
+function hideLoader() {
+  if (loaderHidden) return;
+  const elapsed = Date.now() - loaderStart;
+  const wait = Math.max(0, LOADER_MIN_MS - elapsed);
+  window.setTimeout(() => doHideLoader(), wait);
+}
+
+function doHideLoader() {
+  if (loaderHidden) return;
+  loaderHidden = true;
+  const loader = document.getElementById("app-loader");
+  if (loader) {
+    loader.classList.add("is-hidden");
+    window.setTimeout(() => {
+      loader.remove();
+      document.body.classList.remove("is-loading");
+      document.body.removeAttribute("aria-busy");
+    }, 400);
+  } else {
+    document.body.classList.remove("is-loading");
+    document.body.removeAttribute("aria-busy");
+  }
+}
+
+// Fallback: se o Supabase demorar demais, esconde o loader após 4s.
+window.setTimeout(doHideLoader, LOADER_MAX_MS);
+
+// Também espera o evento window "load" (todos os recursos carregados).
+if (document.readyState === "complete") {
+  // já carregou antes do módulo rodar
+} else {
+  window.addEventListener("load", () => {
+    // Só adianta o hide se a conta já estiver pronta; init() chama hideLoader ao final.
+  }, { once: true });
 }
 
 init().catch(async error => {
   console.error(error);
   setConnectionStatus("offline", "Local · sem conta");
   await informativoModal("Não foi possível iniciar", "A aplicação continuará disponível com armazenamento local.");
+  hideLoader();
 });

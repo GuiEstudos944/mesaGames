@@ -166,23 +166,49 @@ function animarDado(die, valorFinal, { delay = 0, duration = ROLL_DURATION } = {
   }
 
   const voltas = sides >= 20 ? 3 : 2;
+  const totalDeg = voltas * 360;
+  // Antecipação: leve encolhimento + rotação contrária antes do pulo principal.
   const quadros = [
     { transform: "translateY(0) rotate(0deg) scale(1)", offset: 0 },
-    { transform: `translateY(-34px) rotate(${voltas * 90}deg) scale(1.16)`, offset: 0.24 },
-    { transform: `translateY(5px) rotate(${voltas * 180}deg) scale(0.93)`, offset: 0.5 },
-    { transform: `translateY(-16px) rotate(${voltas * 270}deg) scale(1.07)`, offset: 0.74 },
-    { transform: `translateY(0) rotate(${voltas * 360}deg) scale(1)`, offset: 1 }
+    { transform: "translateY(2px) rotate(-12deg) scale(.88)", offset: 0.08 }, // antecipação
+    { transform: `translateY(-36px) rotate(${totalDeg * 0.25}deg) scale(1.22)`, offset: 0.28 }, // salto alto
+    { transform: `translateY(6px) rotate(${totalDeg * 0.5}deg) scale(0.92)`, offset: 0.52 }, // impacto no "chão"
+    { transform: `translateY(-18px) rotate(${totalDeg * 0.75}deg) scale(1.1)`, offset: 0.74 }, // segundo pulo menor
+    { transform: `translateY(0) rotate(${totalDeg}deg) scale(1)`, offset: 0.92 }, // pouso
+    { transform: `translateY(0) rotate(${totalDeg}deg) scale(1.12)`, offset: 0.96 }, // squash no impacto
+    { transform: `translateY(0) rotate(${totalDeg}deg) scale(1)`, offset: 1 } // relaxa
   ];
   const animacao = die.animate(quadros, {
-    duration: duration + (sides >= 20 ? 150 : 0),
+    duration: duration + (sides >= 20 ? 180 : 0),
     delay,
-    easing: "ease-out",
+    easing: "cubic-bezier(.25, .1, .25, 1)",
     fill: "none"
   });
 
-  // Efeito "embaralhar": o número troca rápido até a animação terminar.
-  const embaralhar = setInterval(() => definirNumero(die, rolarValor(sides)), 70);
-  const parar = () => { clearInterval(embaralhar); definirNumero(die, valorFinal); };
+  // Efeito "embaralhar": o número troca rápido, acelerando no meio da rolagem.
+  let embaralharTimer = null;
+  const intervalos = [110, 85, 60, 45, 55, 70, 95];
+  let i = 0;
+  const embaralhar = () => {
+    definirNumero(die, rolarValor(sides));
+    i = Math.min(i + 1, intervalos.length - 1);
+    embaralharTimer = setTimeout(embaralhar, intervalos[i]);
+  };
+  embaralharTimer = setTimeout(embaralhar, 40);
+
+  const parar = () => {
+    clearTimeout(embaralharTimer);
+    definirNumero(die, valorFinal);
+    // Pulso de chegada: leve escala para destacar o resultado travado.
+    die.animate(
+      [
+        { transform: `scale(1)` },
+        { transform: `scale(1.18)` },
+        { transform: `scale(1)` }
+      ],
+      { duration: 280, easing: "ease-out", fill: "none" }
+    );
+  };
   return animacao.finished.then(parar, parar);
 }
 
