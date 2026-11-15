@@ -18,6 +18,7 @@ let busy = false;
 let queuedAction = null;
 let finishedKey = "";
 let renderedDuration = null;
+let remoteTimerFailed = false;
 
 function durationFromInputs() {
   const minutes = Math.min(999, Math.max(0, Number($("timer-minutes")?.value) || 0));
@@ -156,8 +157,16 @@ async function performAction(action, mode = null, durationMs = null) {
     state.timer = normalizeTimerState(row);
     persistLocal();
     render();
+    remoteTimerFailed = false;
   } catch {
-    toast("Não foi possível atualizar o timer. Verifique sua conexão e permissão na sala.", "error", 5000);
+    // Se a sincronização remota ainda não estiver disponível (ex.: a migração
+    // do timer ainda não foi aplicada no banco), a ação continua funcionando
+    // localmente, sem travar o usuário com erros repetidos.
+    applyLocalAction(action, mode, durationMs);
+    if (!remoteTimerFailed) {
+      remoteTimerFailed = true;
+      toast("Timer em modo local: a sincronização ainda não está ativa no banco.", "error", 5000);
+    }
   } finally {
     busy = false;
     setControlsEnabled(canControl);
@@ -182,6 +191,7 @@ async function refreshRemoteTimer(scope, token) {
   state.timer = normalizeTimerState(row);
   persistLocal();
   render();
+  remoteTimerFailed = false;
 }
 
 async function activateScope({ force = false } = {}) {
@@ -225,9 +235,14 @@ async function activateScope({ force = false } = {}) {
       }
     });
   } catch {
-    state.timer = normalizeTimerState(null);
+    // Mantém o estado local do timer e avisa só uma vez por falha de
+    // sincronização, para não poluir a tela a cada reconexão.
+    state.timer = normalizeTimerState(state.timer);
     render();
-    toast("Não foi possível carregar o timer sincronizado.", "error", 5000);
+    if (!remoteTimerFailed) {
+      remoteTimerFailed = true;
+      toast("Não foi possível carregar o timer sincronizado. O modo local está em uso.", "error", 5000);
+    }
   }
 }
 
