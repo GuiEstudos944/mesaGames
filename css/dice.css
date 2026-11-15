@@ -220,6 +220,10 @@
     font-size: 0.625rem
 }
 
+.dice-placeholder .bi {
+    font-size: 2rem
+}
+
 .die {
     width: 3.75rem;
     height: 3.75rem;

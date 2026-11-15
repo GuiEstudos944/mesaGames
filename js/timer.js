@@ -19,6 +19,11 @@ let queuedAction = null;
 let finishedKey = "";
 let renderedDuration = null;
 let remoteTimerFailed = false;
+let renderedToggleState = null;
+
+// Ícones do Bootstrap Icons para o botão iniciar/pausar.
+const ICON_PLAY = '<i class="bi bi-play-fill" aria-hidden="true"></i>';
+const ICON_PAUSE = '<i class="bi bi-pause-fill" aria-hidden="true"></i>';
 
 function durationFromInputs() {
   const minutes = Math.min(999, Math.max(0, Number($("timer-minutes")?.value) || 0));
@@ -62,7 +67,13 @@ function render() {
   }
 
   const toggle = $("timer-toggle");
-  if (toggle) toggle.textContent = timer.status === "running" ? "Ⅱ Pausar" : "▶ Iniciar";
+  if (toggle) {
+    const running = timer.status === "running";
+    if (renderedToggleState !== running) {
+      renderedToggleState = running;
+      toggle.innerHTML = `${running ? ICON_PAUSE : ICON_PLAY}${running ? "Pausar" : "Iniciar"}`;
+    }
+  }
 
   const tabs = document.querySelectorAll(".timer-panel [data-mode]");
   tabs.forEach(tab => {

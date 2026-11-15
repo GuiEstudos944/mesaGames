@@ -4,6 +4,9 @@ import { savePlayers, updatePlayerScore } from "./supabase.js";
 
 let onChange = () => {};
 let debounceId;
+
+// Ícone do Bootstrap Icons para o botão de remover jogador.
+const ICON_REMOVE = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
 export function initScore(callback) { onChange = callback; renderScore(); }
 function scheduleSave() {
   saveLocalState(); onChange();
@@ -21,8 +24,9 @@ export function renderScore() {
     card.style.setProperty("--player-color", player.color || playerColors()[index % 12]);
     const top = document.createElement("div"); top.className = "player-top";
     const name = document.createElement("button"); name.className = "player-name"; name.type = "button"; name.textContent = player.name; name.setAttribute("aria-label", `Editar nome de ${player.name}`);
+    const editIcon = document.createElement("i"); editIcon.className = "bi bi-pencil-square"; editIcon.setAttribute("aria-hidden", "true"); name.append(editIcon);
     name.addEventListener("click", async () => { const value = await editarNomeModal(player.name, { maxLength: 20 }); if (value && value !== player.name) { player.name = String(value).slice(0, 20); scheduleSave(); renderScore(); } });
-    const remove = document.createElement("button"); remove.className = "player-remove"; remove.type = "button"; remove.textContent = "×"; remove.setAttribute("aria-label", `Remover ${player.name}`);
+    const remove = document.createElement("button"); remove.className = "player-remove"; remove.type = "button"; remove.innerHTML = ICON_REMOVE; remove.setAttribute("aria-label", `Remover ${player.name}`);
     remove.disabled = state.players.length <= 1;
     remove.addEventListener("click", async () => {
       if (state.players.length <= 1) return;
