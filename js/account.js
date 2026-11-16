@@ -17,6 +17,7 @@ let currentUser = null;
 let sessions = [];
 let refreshing = false;
 let busy = false;
+let loggingOut = false;
 let checkTimer = null;
 
 const $ = id => document.getElementById(id);
@@ -367,16 +368,26 @@ function bindUi() {
   });
 
   $("account-logout").addEventListener("click", async () => {
-    if (busy) return;
-    busy = true;
+    if (loggingOut) return;
+    loggingOut = true;
+    const logoutButton = $("account-logout");
+    if (logoutButton) {
+      logoutButton.disabled = true;
+      logoutButton.textContent = "Saindo...";
+    }
     try {
-      await api.flushPendingSync();
       await api.signOut();
+      if (currentUser) showSignedOut();
+      closeDialog();
       toast("Você saiu da conta.");
     } catch (error) {
       toast(`Erro ao sair: ${authError(error)}`, "error");
     } finally {
-      busy = false;
+      loggingOut = false;
+      if (logoutButton) {
+        logoutButton.disabled = false;
+        logoutButton.textContent = "Sair da conta";
+      }
     }
   });
 
@@ -579,7 +590,7 @@ export function initAccount() {
       return;
     }
     if (event === "SIGNED_OUT") {
-      queueMicrotask(() => { showSignedOut(); });
+      queueMicrotask(() => { if (currentUser) showSignedOut(); });
       return;
     }
     if (session?.user) {
