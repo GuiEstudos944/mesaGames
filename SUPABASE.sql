@@ -247,20 +247,8 @@ exception when unique_violation then
 end;
 $$;
 
--- Um e-mail já cadastrado? (sem revelar nenhum outro dado)
-create or replace function public.is_email_available(p_email text)
-returns boolean
-language sql
-security definer
-stable
-set search_path = public, auth
-as $$
-  select btrim(coalesce(p_email, '')) <> ''
-     and not exists (
-       select 1 from auth.users u
-       where lower(u.email) = lower(btrim(p_email))
-     );
-$$;
+-- (A checagem pública de e-mail foi removida: revelar se um e-mail já existe
+--  permite enumerar contas. O cadastro responde sempre de forma genérica.)
 
 -- Um apelido já cadastrado? Considera o apelido atual (metadata) e o histórico
 -- em public.profiles, ignorando maiúsculas/minúsculas e espaços nas pontas.
@@ -318,10 +306,8 @@ begin
 end;
 $$;
 
-revoke all on function public.is_email_available(text) from public;
 revoke all on function public.is_nickname_available(text) from public;
 revoke all on function public.set_display_name(text) from public;
-grant execute on function public.is_email_available(text) to anon, authenticated;
 grant execute on function public.is_nickname_available(text) to anon, authenticated;
 grant execute on function public.set_display_name(text) to authenticated;
 
@@ -401,6 +387,9 @@ create table if not exists public.room_members (
 create index if not exists room_members_user_idx on public.room_members (user_id);
 
 -- Verifica participação sem disparar o RLS de `room_members` (evita recursão).
+-- Sempre consulta o PRÓPRIO usuário autenticado (auth.uid()): o parâmetro
+-- p_user é aceito apenas por compatibilidade de assinatura e é ignorado, para
+-- ninguém poder sondar a participação de terceiros.
 create or replace function public.is_room_member(p_room uuid, p_user uuid)
 returns boolean
 language sql
@@ -408,10 +397,10 @@ security definer
 stable
 set search_path = public
 as $$
-  select p_user is not null
+  select auth.uid() is not null
      and exists (
        select 1 from public.room_members m
-       where m.room_id = p_room and m.user_id = p_user
+       where m.room_id = p_room and m.user_id = auth.uid()
      );
 $$;
 
@@ -613,7 +602,7 @@ grant execute on function public.is_room_member(uuid, uuid) to authenticated;
 revoke all on public.rooms from anon;
 revoke all on public.room_members from anon;
 grant select, insert, update, delete on public.rooms to authenticated;
-grant select, insert, update, delete on public.room_members to authenticated;
+grant select, insert, delete on public.room_members to authenticated;
 
 -- Tempo real: publica as mudanças das duas tabelas no Supabase Realtime.
 do $$
@@ -724,7 +713,7 @@ grant select, insert, update, delete on public.game_sessions to authenticated;
 
 -- Salas: usuários logados listam/entram/criam; o RLS restringe o quê cada um vê.
 grant select, insert, update, delete on public.rooms to authenticated;
-grant select, insert, update, delete on public.room_members to authenticated;
+grant select, insert, delete on public.room_members to authenticated;
 
 -- Uso normal das sequences (se existirem) — necessário para inserts com default.
 revoke all on all sequences in schema public from public;

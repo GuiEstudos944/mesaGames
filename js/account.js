@@ -10,7 +10,7 @@ import { ADMIN_EMAIL } from "./config.js";
 import { initRooms, refreshRoomsPanel, resetRooms } from "./rooms.js";
 
 const LAST_SESSION_KEY = "mesa-last-session-v1";
-const MIN_PASSWORD = 6;
+const MIN_PASSWORD = 12;
 const CHECK_DELAY = 450;         // espera antes de consultar disponibilidade
 
 let currentUser = null;
@@ -160,24 +160,20 @@ function showSignedOut() {
 }
 
 /* ------------------------------------------------ disponibilidade de cadastro */
-/** Consulta o banco: true = livre, false = já usado, null = não foi possível. */
-async function checkAvailability(kind, value) {
+/** Consulta o banco: true = livre, false = já usado, null = não foi possível.
+ *  Não checamos e-mail de propósito: dizer se um e-mail já existe permitiria
+ *  enumerar contas. O cadastro responde sempre de forma genérica. */
+async function checkNicknameFree(value) {
   try {
-    return kind === "email" ? await api.checkEmailAvailable(value) : await api.checkNicknameAvailable(value);
+    return await api.checkNicknameAvailable(value);
   } catch (error) {
     console.warn(error);
-    return null; // banco sem as funções novas: não bloqueia o cadastro
+    return null; // banco sem a função nova: não bloqueia o cadastro
   }
 }
 
-function availabilityMessages(kind, available) {
-  const taken = kind === "email" ? "Este e-mail já está cadastrado." : "Este apelido já está em uso.";
-  const free = kind === "email" ? "E-mail disponível." : "Apelido disponível.";
-  return available === false ? [taken, true] : [free, false];
-}
-
-/** Avisa enquanto o usuário digita se o e-mail/apelido já está em uso. */
-function bindAvailability(inputId, kind) {
+/** Avisa enquanto o usuário digita se o apelido já está em uso. */
+function bindNicknameAvailability(inputId) {
   const input = $(inputId);
   if (!input) return;
   input.addEventListener("input", () => {
@@ -185,11 +181,11 @@ function bindAvailability(inputId, kind) {
     const value = input.value.trim();
     if (!value) { message(""); return; }
     checkTimer = setTimeout(async () => {
-      // Só avisa no cadastro: ao entrar, um e-mail já cadastrado é o esperado.
+      // Só avisa no cadastro: ao entrar, um apelido já usado é o esperado.
       if ($("auth-submit").dataset.mode !== "signup") return;
-      const available = await checkAvailability(kind, value);
+      const available = await checkNicknameFree(value);
       if (available === null || input.value.trim() !== value) return;
-      message(...availabilityMessages(kind, available));
+      message(available ? "Apelido disponível." : "Este apelido já está em uso.", available === false);
     }, CHECK_DELAY);
   });
 }
@@ -266,9 +262,8 @@ function bindUi() {
   $("auth-mode-signup").addEventListener("click", () => setMode("signup"));
   $("auth-mode-login").addEventListener("click", () => setMode("login"));
 
-  // Aviso em tempo real: e-mail/apelido já em uso durante o cadastro.
-  bindAvailability("auth-email", "email");
-  bindAvailability("auth-name", "nickname");
+  // Aviso em tempo real: apelido já em uso durante o cadastro.
+  bindNicknameAvailability("auth-name");
 
   $("auth-forgot").addEventListener("click", async () => {
     const email = $("auth-email").value.trim();
@@ -298,7 +293,7 @@ function bindUi() {
     try {
       // Só consulta o banco quando o apelido realmente muda (o próprio vale).
       if (name.toLowerCase() !== current.toLowerCase()) {
-        const available = await checkAvailability("nickname", name);
+        const available = await checkNicknameFree(name);
         if (available === false) { toast("Este apelido já está em uso.", "error"); return; }
       }
       await api.updateDisplayName(name);
@@ -327,28 +322,22 @@ function bindUi() {
     message(mode === "signup" ? "Criando conta…" : "Entrando…");
     try {
       if (mode === "signup") {
-        // Avisa antes de criar: e-mail já cadastrado e apelido já usado.
-        if (await checkAvailability("nickname", name) === false) {
+        // Avisa antes de criar se o apelido já está em uso (não é dado sensível).
+        if (await checkNicknameFree(name) === false) {
           message("Este apelido já está em uso. Escolha outro.", true);
           return;
         }
-        if (await checkAvailability("email", email) === false) {
-          message("Este e-mail já está cadastrado. Entre na conta ou recupere a senha.", true);
-          return;
-        }
         const result = await api.signUp(email, password, name);
-        if (result?.user && Array.isArray(result.user.identities) && result.user.identities.length === 0) {
-          // O Supabase não revela o motivo, mas identidades vazias = e-mail já existe.
-          message("Este e-mail já está cadastrado. Entre na conta ou recupere a senha.", true);
-        } else if (!result?.session) {
-          // Confirmação de e-mail ligada: a conta existe, mas ainda não há sessão.
-          message("Conta criada! Confirme o e-mail que enviamos para ativar o acesso.");
-          toast("Conta criada. Confirme o e-mail para liberar a sincronização.", "error", 6000);
-        } else {
+        if (result?.session) {
           message("");
           await refreshAccount();
           closeDialog();
           toast("Conta criada e conectada!");
+        } else {
+          // Mesma resposta para conta nova e para e-mail já existente, para não
+          // permitir descobrir quais e-mails estão cadastrados.
+          message("Se este e-mail ainda não tinha conta, enviamos um link de confirmação. Se já tinha, use “Entrar” ou recupere a senha.");
+          toast("Confira seu e-mail para ativar o acesso.", "success", 6000);
         }
       } else {
         await api.signIn(email, password);

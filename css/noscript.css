@@ -1,0 +1,10 @@
+/* Estilos aplicados somente quando o JavaScript está desativado.
+   Carregado via <noscript><link rel="stylesheet" href="./css/noscript.css"></noscript>
+   porque o CSP não permite blocos <style> inline. */
+#app-loader {
+  display: none !important;
+}
+
+body.is-loading {
+  overflow: auto !important;
+}

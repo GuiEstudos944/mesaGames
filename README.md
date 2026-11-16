@@ -54,7 +54,7 @@ O script cria/ajusta:
 | Índices únicos | `game_sessions_user_updated_idx` (listagem rápida) e `profiles_display_name_unique_idx` (apelido único). |
 | Políticas **RLS** | Cada usuário só vê/altera/exclui as **próprias** linhas; nas salas, só quem é membro lê/grava. Acesso anônimo é negado. |
 | Triggers | `updated_at` automático, criação do perfil ao cadastrar (`handle_new_user`), revisão da sala e proteção das configurações da sala contra convidados. |
-| Funções `is_email_available`, `is_nickname_available` | Verificam, **sem expor dados**, se um e-mail já tem conta ou se um apelido está em uso (usadas no cadastro). |
+| Função `is_nickname_available` | Verifica, **sem expor dados**, se um apelido está em uso (usada no cadastro). A checagem de e-mail foi removida para evitar enumeração de contas. |
 | Funções `list_public_rooms`, `join_room_by_code`, `list_room_members` | Listar salas abertas, entrar por código (inclusive em salas privadas) e ver os jogadores da sala. |
 
 > **Tabelas antigas:** se o seu projeto já tinha `players`, `game_state`,
@@ -246,10 +246,10 @@ Resumo do modelo de segurança do app:
   Um usuário pode revelá-la pelas ferramentas do navegador, mas as ações agem
   **apenas nos próprios dados**, que já são protegidos por RLS — não há risco de
   afetar a mesa de outra pessoa. Autorização "de verdade" só existe no servidor.
-- **Verificação de e-mail/apelido é pública** (`is_email_available` /
-  `is_nickname_available`), pois o cadastro precisa avisar antes do login. Isso
-  permite descobrir se um e-mail tem conta no site (enumeramos o mínimo possível:
-  só `true`/`false`, sem outros dados).
+- **Verificação de apelido é pública** (`is_nickname_available`), pois o
+  cadastro precisa avisar antes do login se o apelido já está em uso. A
+  verificação de **e-mail** deixou de existir: o cadastro responde de forma
+  genérica e nunca revela se um e-mail já tem conta (evita enumeração).
 - **Rate limit** não é aplicado no front-end; use as **Rate Limits** do Supabase
   (Authentication) e/ou um proxy `/api` se isso virar um problema.
 

@@ -1,6 +1,6 @@
 // Camada Supabase: autenticação, partidas por usuário e sincronização com debounce.
 // A segurança real é aplicada no banco (RLS) — aqui só usamos a chave pública.
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.2/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_CONFIGURED, AUTH_REDIRECT_URL } from "./config.js";
 import {
   state, snapshot, applySnapshot, markClean, markDirty, touch,
@@ -142,16 +142,6 @@ function isMissingFunction(error) {
   return code === "PGRST202" || code === "42883" || code === "404" || /could not find the function/i.test(String(error?.message || ""));
 }
 
-/** O e-mail já tem conta? Usado no cadastro para avisar antes de criar. */
-export async function checkEmailAvailable(email) {
-  if (!client) return null;
-  const value = String(email || "").trim();
-  if (!value) return null;
-  const { data, error } = await client.rpc("is_email_available", { p_email: value });
-  if (error) { if (isMissingFunction(error)) return null; throw error; }
-  return availabilityResult(data);
-}
-
 /** O apelido já está em uso? Usado no cadastro e ao salvar o apelido. */
 export async function checkNicknameAvailable(name) {
   if (!client) return null;
@@ -218,11 +208,13 @@ function cleanName(name) {
 }
 
 /* ------------------------------------------------------------------- salas */
-/** Código curto e legível (sem I, O, 0 e 1) para compartilhar a sala. */
-function newRoomCode(length = 6) {
+/** Código de 8 caracteres (sem I, O, 0 e 1) para compartilhar a sala.
+ *  Usa apenas crypto.getRandomValues: sem aleatoriedade insegura de reserva. */
+function newRoomCode(length = 8) {
+  const random = globalThis.crypto?.getRandomValues?.bind(globalThis.crypto);
+  if (!random) throw new Error("Geração segura de código indisponível neste navegador.");
   const bytes = new Uint8Array(length);
-  if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(bytes);
-  else for (let i = 0; i < length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  random(bytes);
   return Array.from(bytes, byte => ROOM_CODE_ALPHABET[byte % ROOM_CODE_ALPHABET.length]).join("");
 }
 

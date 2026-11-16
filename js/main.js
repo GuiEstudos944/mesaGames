@@ -144,7 +144,9 @@ function bindSyncIndicator() {
     if (!info) return;
     setConnectionStatus(info[0], info[1]);
     if (status === "error") {
-      toast(`Erro ao sincronizar: ${detail?.message || "verifique a conexão"}. Seus dados continuam salvos neste navegador.`, "error", 5000);
+      // Detalhe técnico fica só no console; o usuário recebe uma mensagem genérica.
+      console.error("Falha ao sincronizar:", detail);
+      toast("Não foi possível sincronizar agora. Seus dados continuam salvos neste navegador.", "error", 5000);
     }
     if (status === "offline") {
       toast("Sem conexão. As alterações ficam salvas neste navegador e sincronizam depois.", "error", 4500);
@@ -156,7 +158,7 @@ async function runManagedAction(button, action) {
   button.classList.add("loading");
   button.disabled = true;
   try { await action(); }
-  catch (error) { console.error(error); toast(`Não foi possível concluir: ${error.message || "erro desconhecido"}`, "error", 4500); }
+  catch (error) { console.error(error); toast("Não foi possível concluir a operação. Tente novamente.", "error", 4500); }
   finally { button.classList.remove("loading"); button.disabled = false; }
 }
 

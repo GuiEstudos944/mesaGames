@@ -54,10 +54,37 @@ if (process.env.VERCEL && (!url || !anonKey)) {
   process.exit(1);
 }
 
-if (/service_role/i.test(anonKey)) {
-  console.error("⛔ A chave informada parece ser 'service_role'. Use SOMENTE a chave anon/publishable.");
+/**
+ * Aceita SOMENTE chave pública: o formato novo (prefixo `sb_publishable_`) ou
+ * uma JWT cujo payload tenha role `anon`. Qualquer outra role é rejeitada.
+ */
+function assertPublicKey(key) {
+  if (!key) return; // ausente: o build decide adiante se isso é um problema
+  if (key.startsWith("sb_publishable_")) return;
+
+  const parts = key.split(".");
+  if (parts.length === 3 && parts.every(Boolean)) {
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+      if (payload?.role === "anon") return;
+      console.error(
+        `⛔ SUPABASE_ANON_KEY tem role "${payload?.role ?? "desconhecida"}". ` +
+        "Use SOMENTE a chave anon/publishable — nunca a service_role."
+      );
+      process.exit(1);
+    } catch {
+      /* não era uma JWT válida: cai no erro genérico abaixo */
+    }
+  }
+
+  console.error(
+    "⛔ SUPABASE_ANON_KEY inválida. Use a chave pública nova (prefixo sb_publishable_...) " +
+    "ou a JWT 'anon' do projeto. Nunca use a service_role."
+  );
   process.exit(1);
 }
+
+assertPublicKey(anonKey);
 
 // Nenhuma variável pode carregar um segredo do Supabase para o front-end.
 for (const [key, value] of [["SUPABASE_URL", url], ["SUPABASE_ANON_KEY", anonKey], ["ADMIN_EMAIL", adminEmail]]) {
