@@ -78,6 +78,9 @@ function applyPanelVisibility() {
     const element = document.querySelector(panel.selector);
     if (element) element.hidden = state.panels[panel.key] === false;
   });
+  document.querySelectorAll(".dashboard-column").forEach(column => {
+    column.hidden = !Array.from(column.children).some(panel => !panel.hidden);
+  });
 }
 
 function renderLayoutOptions() {

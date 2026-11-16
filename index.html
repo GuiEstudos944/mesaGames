@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,7 +10,9 @@
   <link rel="apple-touch-icon" href="./imgs/iconMesaGames.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nova+Square&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nova+Square&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+    rel="stylesheet">
   <!-- Aplica o tema ANTES do paint para evitar piscar (FOUC). Sem módulo, inline. -->
   <script>
     (function () {
@@ -42,22 +45,45 @@
   </script>
   <!-- Loader: primeiro filho do body, bloqueia scroll enquanto ativo. -->
   <style>
-    html { scroll-behavior: smooth; }
-    body.is-loading { overflow: hidden; }
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body.is-loading {
+      overflow: hidden;
+    }
+
     #app-loader {
-      position: fixed; inset: 0; z-index: 9999;
-      display: grid; place-items: center;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: grid;
+      place-items: center;
       background: var(--bg, #191D27);
       transition: opacity .4s ease;
     }
-    #app-loader.is-hidden { opacity: 0; pointer-events: none; }
-    .loader-visually-hidden {
-      position: absolute; width: 1px; height: 1px; padding: 0;
-      margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
-      white-space: nowrap; border: 0;
+
+    #app-loader.is-hidden {
+      opacity: 0;
+      pointer-events: none;
     }
+
+    .loader-visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     @media (prefers-reduced-motion: reduce) {
-      #app-loader { transition: opacity .15s ease; }
+      #app-loader {
+        transition: opacity .15s ease;
+      }
     }
   </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -67,19 +93,30 @@
   <script src="./js/env.js"></script>
   <script type="module" src="./js/main.js"></script>
 </head>
+
 <body class="is-loading" aria-busy="true">
-  <noscript><style>#app-loader{display:none!important}body.is-loading{overflow:auto!important}</style></noscript>
+  <noscript>
+    <style>
+      #app-loader {
+        display: none !important
+      }
+
+      body.is-loading {
+        overflow: auto !important
+      }
+    </style>
+  </noscript>
   <!-- Loader de carregamento (sai com fade-out ~400ms quando pronto). -->
   <div id="app-loader" role="status" aria-live="polite" aria-busy="true">
     <div class="loader-inner">
       <div class="loader-logo" aria-hidden="true">
         <svg class="loader-dice" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/>
-          <circle cx="20" cy="20" r="4" fill="var(--bg)"/>
-          <circle cx="44" cy="20" r="4" fill="var(--bg)"/>
-          <circle cx="32" cy="32" r="4" fill="var(--bg)"/>
-          <circle cx="20" cy="44" r="4" fill="var(--bg)"/>
-          <circle cx="44" cy="44" r="4" fill="var(--bg)"/>
+          <rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor" />
+          <circle cx="20" cy="20" r="4" fill="var(--bg)" />
+          <circle cx="44" cy="20" r="4" fill="var(--bg)" />
+          <circle cx="32" cy="32" r="4" fill="var(--bg)" />
+          <circle cx="20" cy="44" r="4" fill="var(--bg)" />
+          <circle cx="44" cy="44" r="4" fill="var(--bg)" />
         </svg>
         <span class="loader-brand">MesaGames</span>
       </div>
@@ -91,29 +128,31 @@
   </div>
   <!-- ============================================================ HEADER -->
   <header class="topbar">
-    <a class="brand" href="#" aria-label="MesaGames, início">
-      <span class="brand-icon" aria-hidden="true">
-        <img src="./imgs/iconMesaGames.png" alt="" width="42" height="42">
-      </span>
-      <span class="brand-name">MesaGames</span>
-    </a>
-    <div class="top-actions">
-      <span id="connection-status" class="connection offline" aria-live="polite"><i></i><span>Local · sem conta</span></span>
-      <button id="account-open" class="account-button" type="button" title="Conta e partidas salvas">
-        <span class="account-icon" aria-hidden="true">
-          <i class="bi bi-person-fill" aria-hidden="true"></i>
+      <a class="brand" href="#" aria-label="MesaGames, início">
+        <span class="brand-icon" aria-hidden="true">
+          <img src="./imgs/iconMesaGames.png" alt="" width="42" height="42">
         </span>
-        <span id="account-label">Entrar</span>
-      </button>
-      <button id="theme-toggle" class="theme-toggle" type="button" role="switch" aria-checked="false" aria-label="Alternar tema claro/escuro" title="Alternar tema">
-        <span class="theme-toggle-track">
-          <span class="theme-toggle-thumb">
-            <i class="bi bi-sun-fill bi icon-sun" aria-hidden="true"></i>
-            <i class="bi bi-moon-fill bi icon-moon" aria-hidden="true"></i>
+        <span class="brand-name">MesaGames</span>
+      </a>
+      <div class="top-actions">
+        <span id="connection-status" class="connection offline" aria-live="polite"><i></i><span>Local · sem
+            conta</span></span>
+        <button id="account-open" class="account-button" type="button" title="Conta e partidas salvas">
+          <span class="account-icon" aria-hidden="true">
+            <i class="bi bi-person-fill" aria-hidden="true"></i>
           </span>
-        </span>
-      </button>
-    </div>
+          <span id="account-label">Entrar</span>
+        </button>
+        <button id="theme-toggle" class="theme-toggle" type="button" role="switch" aria-checked="false"
+          aria-label="Alternar tema claro/escuro" title="Alternar tema">
+          <span class="theme-toggle-track">
+            <span class="theme-toggle-thumb">
+              <i class="bi bi-sun-fill icon-sun" aria-hidden="true"></i>
+              <i class="bi bi-moon-fill icon-moon" aria-hidden="true"></i>
+            </span>
+          </span>
+        </button>
+      </div>
   </header>
 
   <main class="page-shell">
@@ -122,15 +161,17 @@
       <div class="hero-deco hero-deco-left" aria-hidden="true">
         <svg viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
           <!-- meeple -->
-          <path d="M70 30c-11 0-20 9-20 20 0 6 2.7 11.4 7 15.2-15.2 3.7-26 17-26 32.8 0 10.8 8.7 19.6 19.6 19.6h38.8c10.9 0 19.6-8.8 19.6-19.6 0-15.8-10.8-29.1-26-32.8 4.3-3.8 7-9.2 7-15.2 0-11-9-20-20-20z" fill="currentColor" opacity="0.9"/>
+          <path
+            d="M70 30c-11 0-20 9-20 20 0 6 2.7 11.4 7 15.2-15.2 3.7-26 17-26 32.8 0 10.8 8.7 19.6 19.6 19.6h38.8c10.9 0 19.6-8.8 19.6-19.6 0-15.8-10.8-29.1-26-32.8 4.3-3.8 7-9.2 7-15.2 0-11-9-20-20-20z"
+            fill="currentColor" opacity="0.9" />
           <!-- dice -->
           <g transform="translate(100 130)">
-            <rect x="0" y="0" width="56" height="56" rx="12" fill="currentColor" opacity="0.85"/>
-            <circle cx="14" cy="14" r="4" fill="var(--bg)"/>
-            <circle cx="42" cy="14" r="4" fill="var(--bg)"/>
-            <circle cx="28" cy="28" r="4" fill="var(--bg)"/>
-            <circle cx="14" cy="42" r="4" fill="var(--bg)"/>
-            <circle cx="42" cy="42" r="4" fill="var(--bg)"/>
+            <rect x="0" y="0" width="56" height="56" rx="12" fill="currentColor" opacity="0.85" />
+            <circle cx="14" cy="14" r="4" fill="var(--bg)" />
+            <circle cx="42" cy="14" r="4" fill="var(--bg)" />
+            <circle cx="28" cy="28" r="4" fill="var(--bg)" />
+            <circle cx="14" cy="42" r="4" fill="var(--bg)" />
+            <circle cx="42" cy="42" r="4" fill="var(--bg)" />
           </g>
         </svg>
       </div>
@@ -138,24 +179,26 @@
         <svg viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
           <!-- cards -->
           <g transform="translate(20 40) rotate(-12)">
-            <rect x="0" y="0" width="60" height="84" rx="8" fill="currentColor" opacity="0.85"/>
-            <rect x="8" y="8" width="44" height="68" rx="4" fill="none" stroke="var(--bg)" stroke-width="2" opacity="0.5"/>
-            <path d="M30 28l4 9h9l-7 5 3 9-9-6-9 6 3-9-7-5h9z" fill="var(--bg)" opacity="0.7"/>
+            <rect x="0" y="0" width="60" height="84" rx="8" fill="currentColor" opacity="0.85" />
+            <rect x="8" y="8" width="44" height="68" rx="4" fill="none" stroke="var(--bg)" stroke-width="2"
+              opacity="0.5" />
+            <path d="M30 28l4 9h9l-7 5 3 9-9-6-9 6 3-9-7-5h9z" fill="var(--bg)" opacity="0.7" />
           </g>
           <g transform="translate(70 50) rotate(8)">
-            <rect x="0" y="0" width="60" height="84" rx="8" fill="currentColor" opacity="0.7"/>
-            <rect x="8" y="8" width="44" height="68" rx="4" fill="none" stroke="var(--bg)" stroke-width="2" opacity="0.5"/>
-            <path d="M30 28l4 9h9l-7 5 3 9-9-6-9 6 3-9-7-5h9z" fill="var(--bg)" opacity="0.7"/>
+            <rect x="0" y="0" width="60" height="84" rx="8" fill="currentColor" opacity="0.7" />
+            <rect x="8" y="8" width="44" height="68" rx="4" fill="none" stroke="var(--bg)" stroke-width="2"
+              opacity="0.5" />
+            <path d="M30 28l4 9h9l-7 5 3 9-9-6-9 6 3-9-7-5h9z" fill="var(--bg)" opacity="0.7" />
           </g>
           <!-- coins -->
           <g transform="translate(120 140)">
-            <ellipse cx="22" cy="28" rx="22" ry="7" fill="currentColor" opacity="0.5"/>
-            <circle cx="22" cy="22" r="20" fill="currentColor" opacity="0.9"/>
-            <circle cx="22" cy="22" r="14" fill="none" stroke="var(--bg)" stroke-width="2.5" opacity="0.6"/>
+            <ellipse cx="22" cy="28" rx="22" ry="7" fill="currentColor" opacity="0.5" />
+            <circle cx="22" cy="22" r="20" fill="currentColor" opacity="0.9" />
+            <circle cx="22" cy="22" r="14" fill="none" stroke="var(--bg)" stroke-width="2.5" opacity="0.6" />
           </g>
           <g transform="translate(150 150)">
-            <circle cx="16" cy="16" r="16" fill="currentColor" opacity="0.8"/>
-            <circle cx="16" cy="16" r="11" fill="none" stroke="var(--bg)" stroke-width="2.5" opacity="0.6"/>
+            <circle cx="16" cy="16" r="16" fill="currentColor" opacity="0.8" />
+            <circle cx="16" cy="16" r="11" fill="none" stroke="var(--bg)" stroke-width="2.5" opacity="0.6" />
           </g>
         </svg>
       </div>
@@ -178,156 +221,175 @@
 
     <!-- ===================================================== PAINEL TÍTULO -->
     <div class="section-heading">
-      <i class="bi bi-grid bi section-heading-icon" aria-hidden="true"></i>
+      <i class="bi bi-grid section-heading-icon" aria-hidden="true"></i>
       <h2 class="section-heading-title">PAINEL DA PARTIDA</h2>
       <span class="section-heading-line" aria-hidden="true"></span>
-      <span class="session-pill"><span class="live-dot"></span> <span id="session-pill-label">SESSÃO LOCAL</span></span>
+      <span class="session-pill">
+        <span class="live-dot"></span>
+        <span id="session-pill-label">SESSÃO LOCAL</span>
+        <a id="room-viewer-open" class="session-viewer-link" href="./painel.html" target="_blank"
+          rel="noopener noreferrer" aria-label="Abrir painel da sala em nova aba" title="Abrir painel de visualização"
+          hidden>
+          <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+        </a>
+      </span>
     </div>
 
     <!-- ====================================================== 4 CARDS -->
     <section class="dashboard" aria-label="Ferramentas da partida">
 
-      <!-- ------------------------------ Card 01 / Placar -->
-      <article class="panel score-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">01 / PLACAR</p>
-            <h2>Contador de pontos</h2>
+      <div class="dashboard-column">
+        <!-- ------------------------------ Card 01 / Placar -->
+        <article class="panel score-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">01 / PLACAR</p>
+              <h2>Contador de pontos</h2>
+            </div>
+            <span class="panel-icon" aria-hidden="true">
+              <i class="bi bi-trophy-fill" aria-hidden="true"></i>
+            </span>
           </div>
-          <span class="panel-icon" aria-hidden="true">
-            <i class="bi bi-trophy-fill" aria-hidden="true"></i>
-          </span>
-        </div>
-        <div id="players-grid" class="players-grid"></div>
-        <button id="add-player" class="add-player" type="button">
-          <i class="bi bi-plus-lg" aria-hidden="true"></i>
-          Adicionar jogador <small id="player-count">4/12</small>
-        </button>
-        <button id="reset-scores" class="button danger-outline full reset-scores-btn" type="button">
-          <i class="bi bi-trash3-fill" aria-hidden="true"></i>
-          Zerar pontos
-        </button>
-      </article>
+          <div id="players-grid" class="players-grid"></div>
+          <button id="add-player" class="add-player" type="button">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            Adicionar jogador <small id="player-count">4/12</small>
+          </button>
+          <button id="reset-scores" class="button danger-outline full reset-scores-btn" type="button">
+            <i class="bi bi-trash3-fill" aria-hidden="true"></i>
+            Zerar pontos
+          </button>
+        </article>
 
-      <!-- ------------------------------ Card 02 / Partida -->
-      <article class="panel rounds-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">02 / PARTIDA</p>
-            <h2>Rodadas</h2>
+        <!-- ------------------------------ Card 02 / Partida -->
+        <article class="panel rounds-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">02 / PARTIDA</p>
+              <h2>Rodadas</h2>
+            </div>
+            <span class="panel-icon" aria-hidden="true">
+              <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+            </span>
           </div>
-          <span class="panel-icon" aria-hidden="true">
-            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-          </span>
-        </div>
-        <div class="round-display">
-          <span class="mini-tag turn-tag">TURNO</span>
-          <div class="round-current-block">
-            <span class="round-current-label">RODADA ATUAL</span>
-            <strong id="round-number">01</strong>
+          <div class="round-display">
+            <span class="mini-tag turn-tag">TURNO</span>
+            <div class="round-current-block">
+              <span class="round-current-label">RODADA ATUAL</span>
+              <strong id="round-number">01</strong>
+            </div>
+            <div class="round-line"></div>
+            <p id="turn-label" class="turn-count">Turno 1 de 4</p>
+            <p id="starter-label" class="turn-player">Vez de: Jogador 1</p>
           </div>
-          <div class="round-line"></div>
-          <p id="turn-label" class="turn-count">Turno 1 de 4</p>
-          <p id="starter-label" class="turn-player">Vez de: Jogador 1</p>
-        </div>
-        <div class="button-row">
-          <button id="previous-round" class="button secondary" type="button">
-            <i class="bi bi-chevron-left" aria-hidden="true"></i>
-            Anterior
-          </button>
-          <button id="next-turn" class="button primary" type="button">
-            Próximo turno
-            <i class="bi bi-chevron-right" aria-hidden="true"></i>
-          </button>
-        </div>
-        <button id="next-round" class="button secondary full" type="button">
-          <i class="bi bi-arrow-right" aria-hidden="true"></i>
-          Avançar rodada
-        </button>
-        <button id="reset-round" class="button danger-outline full" type="button">
-          <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-          Reiniciar rodadas
-        </button>
-      </article>
-
-      <!-- ------------------------------ Card 03 / Tempo -->
-      <article class="panel timer-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">03 / TEMPO</p>
-            <h2>Relógio da mesa</h2>
+          <div class="button-row">
+            <button id="previous-round" class="button secondary" type="button">
+              <i class="bi bi-chevron-left" aria-hidden="true"></i>
+              Anterior
+            </button>
+            <button id="next-turn" class="button primary" type="button">
+              Próximo turno
+              <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
           </div>
-          <span class="panel-icon" aria-hidden="true">
-            <i class="bi bi-clock" aria-hidden="true"></i>
-          </span>
-        </div>
-        <div class="tabs" role="tablist" aria-label="Modo do relógio">
-          <button class="tab active" data-mode="stopwatch" role="tab" aria-selected="true">
-            <i class="bi bi-stopwatch-fill" aria-hidden="true"></i>
-            Cronômetro
+          <button id="next-round" class="button secondary full" type="button">
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            Avançar rodada
           </button>
-          <button class="tab" data-mode="countdown" role="tab" aria-selected="false">
-            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-            Temporizador
-          </button>
-        </div>
-        <div id="timer-display" class="timer-display" aria-live="off">00:00</div>
-        <div id="timer-config" class="timer-config" hidden>
-          <label>Minutos <input id="timer-minutes" type="number" min="0" max="999" value="5"></label>
-          <label>Segundos <input id="timer-seconds" type="number" min="0" max="59" value="0"></label>
-        </div>
-        <div class="button-row">
-          <button id="timer-toggle" class="button primary" type="button">
-            <i class="bi bi-play-fill" aria-hidden="true"></i>
-            Iniciar
-          </button>
-          <button id="timer-reset" class="button secondary" type="button">
+          <button id="reset-round" class="button danger-outline full" type="button">
             <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-            Zerar
+            Reiniciar rodadas
           </button>
-        </div>
-        <p id="timer-hint" class="hint">
-          <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-          Conte o tempo da sua partida.
-        </p>
-      </article>
+        </article>
+      </div>
 
-      <!-- ------------------------------ Card 04 / Sorte -->
-      <article class="panel dice-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">04 / SORTE</p>
-            <h2>Dados</h2>
+      <div class="dashboard-column">
+        <!-- ------------------------------ Card 03 / Tempo -->
+        <article class="panel timer-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">03 / TEMPO</p>
+              <h2>Relógio da mesa</h2>
+            </div>
+            <span class="panel-icon" aria-hidden="true">
+              <i class="bi bi-clock" aria-hidden="true"></i>
+            </span>
           </div>
-          <span class="panel-icon" aria-hidden="true">
+          <div class="tabs" role="tablist" aria-label="Modo do relógio">
+            <button class="tab active" data-mode="stopwatch" role="tab" aria-selected="true">
+              <i class="bi bi-stopwatch-fill" aria-hidden="true"></i>
+              Cronômetro
+            </button>
+            <button class="tab" data-mode="countdown" role="tab" aria-selected="false">
+              <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+              Temporizador
+            </button>
+          </div>
+          <div id="timer-display" class="timer-display" aria-live="off">00:00</div>
+          <div id="timer-config" class="timer-config" hidden>
+            <label>Minutos <input id="timer-minutes" type="number" min="0" max="999" value="5"></label>
+            <label>Segundos <input id="timer-seconds" type="number" min="0" max="59" value="0"></label>
+          </div>
+          <div class="button-row">
+            <button id="timer-toggle" class="button primary" type="button">
+              <i class="bi bi-play-fill" aria-hidden="true"></i>
+              Iniciar
+            </button>
+            <button id="timer-reset" class="button secondary" type="button">
+              <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+              Zerar
+            </button>
+          </div>
+          <p id="timer-hint" class="hint">
+            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+            Conte o tempo da sua partida.
+          </p>
+        </article>
+
+        <!-- ------------------------------ Card 04 / Sorte -->
+        <article class="panel dice-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">04 / SORTE</p>
+              <h2>Dados</h2>
+            </div>
+            <span class="panel-icon" aria-hidden="true">
+              <i class="bi bi-dice-5-fill" aria-hidden="true"></i>
+            </span>
+          </div>
+          <div id="dice-pool" class="dice-pool" role="group" aria-label="Escolha os dados da rolagem"></div>
+          <div class="dice-pool-footer">
+            <span id="dice-pool-notation" class="dice-pool-notation is-empty">Escolha os dados</span>
+            <button id="dice-pool-clear" class="text-button" type="button">Limpar seleção</button>
+          </div>
+          <div class="dice-modifier">
+            <span>Modificador</span>
+            <div class="dice-modifier-control">
+              <button type="button" data-mod="-1" aria-label="Diminuir modificador">−</button>
+              <input id="dice-modifier" type="number" min="-999" max="999" value="0" inputmode="numeric"
+                aria-label="Modificador">
+              <button type="button" data-mod="1" aria-label="Aumentar modificador">+</button>
+            </div>
+          </div>
+          <div id="dice-stage" class="dice-stage">
+            <div class="dice-placeholder"><i class="bi bi-dice-5-fill" aria-hidden="true"></i><span>Monte sua rolagem
+                acima</span></div>
+          </div>
+          <div class="dice-result">
+            <div><span class="muted-label">RESULTADO</span><strong id="dice-total">—</strong></div>
+            <div id="dice-individual" class="dice-individual" aria-live="polite">Aguardando rolagem</div>
+          </div>
+          <button id="roll-dice" class="button primary full roll-dice-btn" type="button">
             <i class="bi bi-dice-5-fill" aria-hidden="true"></i>
-          </span>
-        </div>
-        <div id="dice-pool" class="dice-pool" role="group" aria-label="Escolha os dados da rolagem"></div>
-        <div class="dice-pool-footer">
-          <span id="dice-pool-notation" class="dice-pool-notation is-empty">Escolha os dados</span>
-          <button id="dice-pool-clear" class="text-button" type="button">Limpar seleção</button>
-        </div>
-        <div class="dice-modifier">
-          <span>Modificador</span>
-          <div class="dice-modifier-control">
-            <button type="button" data-mod="-1" aria-label="Diminuir modificador">−</button>
-            <input id="dice-modifier" type="number" min="-999" max="999" value="0" inputmode="numeric" aria-label="Modificador">
-            <button type="button" data-mod="1" aria-label="Aumentar modificador">+</button>
-          </div>
-        </div>
-        <div id="dice-stage" class="dice-stage"><div class="dice-placeholder"><i class="bi bi-dice-5-fill" aria-hidden="true"></i><span>Monte sua rolagem acima</span></div></div>
-        <div class="dice-result">
-          <div><span class="muted-label">RESULTADO</span><strong id="dice-total">—</strong></div>
-          <div id="dice-individual" class="dice-individual" aria-live="polite">Aguardando rolagem</div>
-        </div>
-        <button id="roll-dice" class="button primary full roll-dice-btn" type="button">
-          <i class="bi bi-dice-5-fill" aria-hidden="true"></i>
-          Rolar dados
-        </button>
-        <div class="history-heading"><span>Últimas rolagens</span><button id="clear-dice-history" class="text-button" type="button">Limpar</button></div>
-        <ol id="dice-history" class="dice-history"><li class="empty-history">Nenhuma rolagem ainda.</li></ol>
-      </article>
+            Rolar dados
+          </button>
+          <div class="history-heading"><span>Últimas rolagens</span><button id="clear-dice-history" class="text-button"
+              type="button">Limpar</button></div>
+          <ol id="dice-history" class="dice-history">
+            <li class="empty-history">Nenhuma rolagem ainda.</li>
+          </ol>
+        </article>
+      </div>
     </section>
 
     <!-- ================================================== CONFIGURAÇÕES -->
@@ -399,9 +461,11 @@
     <footer class="site-footer">
       <p class="footer-note">
         <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-        A conta é opcional: sem login, tudo continua funcionando e fica salvo apenas neste navegador. Com login, as partidas são salvas na nuvem e ficam disponíveis em outros dispositivos.
+        A conta é opcional: sem login, tudo continua funcionando e fica salvo apenas neste navegador. Com login, as
+        partidas são salvas na nuvem e ficam disponíveis em outros dispositivos.
       </p>
-      <p class="footer-credit">Feito para boas partidas. <span class="brand-name-footer">MesaGames</span> <i class="bi bi-heart-fill" aria-hidden="true"></i></p>
+      <p class="footer-credit">Feito para boas partidas. <span class="brand-name-footer">MesaGames</span> <i
+          class="bi bi-heart-fill" aria-hidden="true"></i></p>
     </footer>
   </main>
 
@@ -424,22 +488,28 @@
       <div id="account-pane">
         <div id="account-auth-view">
           <div class="tabs" role="tablist" aria-label="Entrar ou criar conta">
-            <button id="auth-mode-signup" class="tab active" type="button" role="tab" aria-selected="true">Criar conta</button>
+            <button id="auth-mode-signup" class="tab active" type="button" role="tab" aria-selected="true">Criar
+              conta</button>
             <button id="auth-mode-login" class="tab" type="button" role="tab" aria-selected="false">Entrar</button>
           </div>
           <p id="auth-form-title" class="hint centered">Crie sua conta gratuita</p>
-          <label class="account-field" id="auth-name-field">Apelido<input id="auth-name" type="text" maxlength="60" autocomplete="nickname" placeholder="Como quer ser chamado"></label>
-          <label class="account-field">E-mail<input id="auth-email" type="email" autocomplete="email" placeholder="voce@email.com"></label>
-          <label class="account-field">Senha<input id="auth-password" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"></label>
+          <label class="account-field" id="auth-name-field">Apelido<input id="auth-name" type="text" maxlength="60"
+              autocomplete="nickname" placeholder="Como quer ser chamado"></label>
+          <label class="account-field">E-mail<input id="auth-email" type="email" autocomplete="email"
+              placeholder="voce@email.com"></label>
+          <label class="account-field">Senha<input id="auth-password" type="password" autocomplete="current-password"
+              placeholder="Mínimo de 6 caracteres"></label>
           <button id="auth-submit" class="button primary full" type="button" data-mode="signup">Criar conta</button>
           <button id="auth-forgot" class="text-button full" type="button">Esqueci minha senha</button>
-          <button id="auth-continue" class="text-button full" type="button">Continuar sem conta (dados só neste navegador)</button>
+          <button id="auth-continue" class="text-button full" type="button">Continuar sem conta (dados só neste
+            navegador)</button>
           <p id="account-message" class="account-message" role="status"></p>
         </div>
 
         <div id="account-session-view" hidden>
           <p class="account-user">Conectado como <strong id="account-user-email"></strong></p>
-          <label class="account-field">Apelido<input id="profile-name" type="text" maxlength="60" autocomplete="nickname" placeholder="Como quer ser chamado"></label>
+          <label class="account-field">Apelido<input id="profile-name" type="text" maxlength="60"
+              autocomplete="nickname" placeholder="Como quer ser chamado"></label>
           <button id="save-profile" class="button secondary full" type="button">Salvar apelido</button>
           <div id="session-tools">
             <p class="account-label">PARTIDAS SALVAS</p>
@@ -456,7 +526,8 @@
 
         <div id="account-recovery-view" hidden>
           <p class="account-user">Defina uma nova senha para <strong id="recovery-email"></strong>.</p>
-          <label class="account-field">Nova senha<input id="recovery-password" type="password" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"></label>
+          <label class="account-field">Nova senha<input id="recovery-password" type="password"
+              autocomplete="new-password" placeholder="Mínimo de 6 caracteres"></label>
           <button id="recovery-submit" class="button primary full" type="button">Salvar nova senha</button>
           <p id="recovery-message" class="account-message" role="status"></p>
         </div>
@@ -465,19 +536,23 @@
       <div id="account-rooms-view" hidden>
         <div id="rooms-signed-out">
           <p class="account-user">Entre na sua conta para criar ou entrar em salas online.</p>
-          <p class="hint">Em uma sala, o placar, as rodadas e os dados ficam sincronizados em tempo real entre todos os jogadores conectados.</p>
+          <p class="hint">Em uma sala, o placar, as rodadas e os dados ficam sincronizados em tempo real entre todos os
+            jogadores conectados.</p>
         </div>
 
         <div id="rooms-main" hidden>
           <p class="account-label">CRIAR SALA</p>
-          <label class="account-field">Nome da sala<input id="room-name" type="text" maxlength="60" placeholder="Ex.: Mesa da galera"></label>
-          <label class="room-checkbox"><input id="room-public" type="checkbox" checked><span>Mostrar nas salas abertas</span></label>
+          <label class="account-field">Nome da sala<input id="room-name" type="text" maxlength="60"
+              placeholder="Ex.: Mesa da galera"></label>
+          <label class="room-checkbox"><input id="room-public" type="checkbox" checked><span>Mostrar nas salas
+              abertas</span></label>
           <p class="hint left">Desmarque para criar uma sala privada: só entra quem tiver o código.</p>
           <button id="room-create" class="button primary full" type="button">Criar sala</button>
 
           <p class="account-label spaced">ENTRAR COM CÓDIGO</p>
           <div class="rooms-join-row">
-            <input id="room-code" class="account-input" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" aria-label="Código da sala">
+            <input id="room-code" class="account-input" type="text" maxlength="8" placeholder="ABC123"
+              autocomplete="off" aria-label="Código da sala">
             <button id="room-join-code" class="button secondary" type="button">Entrar</button>
           </div>
 
@@ -485,13 +560,16 @@
             <span class="account-label">SALAS ABERTAS</span>
             <button id="rooms-refresh" class="text-button" type="button">Atualizar</button>
           </div>
-          <ul id="rooms-list" class="rooms-list"><li class="room-empty">Buscando salas…</li></ul>
+          <ul id="rooms-list" class="rooms-list">
+            <li class="room-empty">Buscando salas…</li>
+          </ul>
         </div>
 
         <div id="rooms-active" hidden>
           <p class="account-user">Você está na sala <strong id="active-room-name"></strong></p>
-          <p class="account-user">Código: <strong id="active-room-code"></strong> · <span id="active-room-kind"></span></p>
-          <button id="room-viewer-open" class="button secondary full" type="button">Abrir painel de visualização</button>
+          <p class="account-user">Código: <strong id="active-room-code"></strong> · <span id="active-room-kind"></span>
+          </p>
+          <button id="room-viewer-copy" class="button secondary full" type="button">Copiar link do painel</button>
           <p class="account-label">JOGADORES NA SALA</p>
           <ul id="room-members" class="rooms-list"></ul>
           <button id="room-leave" class="button secondary danger-outline full" type="button">Sair da sala</button>
@@ -512,7 +590,8 @@
           <i class="bi bi-x-lg" aria-hidden="true"></i>
         </button>
       </header>
-      <p class="hint">Marque as ferramentas que devem aparecer na sua mesa. Você pode trazê-las de volta quando quiser.</p>
+      <p class="hint">Marque as ferramentas que devem aparecer na sua mesa. Você pode trazê-las de volta quando quiser.
+      </p>
       <div id="layout-options" class="layout-options"></div>
       <button id="layout-show-all" class="text-button full" type="button">Mostrar todos os painéis</button>
     </section>
@@ -521,4 +600,5 @@
   <div id="modal-root"></div>
   <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
 </body>
+
 </html>

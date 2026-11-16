@@ -34,6 +34,13 @@ function memberName(member) {
   return name || "Jogador sem apelido";
 }
 function plural(value) { return value === 1 ? "1 jogador" : `${value} jogadores`; }
+function roomViewerUrl() {
+  if (!room) return "";
+  const url = new URL("./painel.html", location.href);
+  url.searchParams.set("sala", room.code);
+  url.searchParams.set("modo", "painel");
+  return url.href;
+}
 
 /* ----------------------------------------------------------------- renderização */
 function renderMembers() {
@@ -97,6 +104,35 @@ function renderActiveRoom() {
   const active = Boolean(room);
   show($("rooms-main"), !active);
   show($("rooms-active"), active);
+  const canOpenViewer = active && room.is_public;
+  const viewerLink = $("room-viewer-open");
+  if (viewerLink) {
+    viewerLink.hidden = !active;
+    viewerLink.title = canOpenViewer
+      ? "Abrir painel da sala em nova aba"
+      : "O painel sem login só está disponível para salas públicas";
+    if (canOpenViewer) {
+      viewerLink.href = roomViewerUrl();
+      viewerLink.removeAttribute("aria-disabled");
+      viewerLink.removeAttribute("tabindex");
+    } else {
+      viewerLink.removeAttribute("href");
+      if (active) {
+        viewerLink.setAttribute("aria-disabled", "true");
+        viewerLink.tabIndex = -1;
+      } else {
+        viewerLink.removeAttribute("aria-disabled");
+        viewerLink.removeAttribute("tabindex");
+      }
+    }
+  }
+  const viewerCopyButton = $("room-viewer-copy");
+  if (viewerCopyButton) {
+    viewerCopyButton.disabled = !canOpenViewer;
+    viewerCopyButton.title = canOpenViewer
+      ? "Copiar link de acompanhamento"
+      : "O painel sem login só está disponível para salas públicas";
+  }
   if (active) {
     const nameEl = $("active-room-name");
     const codeEl = $("active-room-code");
@@ -104,13 +140,6 @@ function renderActiveRoom() {
     if (nameEl) nameEl.textContent = room.name;
     if (codeEl) codeEl.textContent = room.code;
     if (kindEl) kindEl.textContent = room.is_public ? "Sala pública" : "Sala privada (só com o código)";
-    const viewerButton = $("room-viewer-open");
-    if (viewerButton) {
-      viewerButton.disabled = !room.is_public;
-      viewerButton.title = room.is_public
-        ? "Copiar link de acompanhamento"
-        : "O painel sem login só está disponível para salas públicas";
-    }
   }
   const leave = $("room-leave");
   if (leave) leave.textContent = isHost ? "Encerrar sala" : "Sair da sala";
@@ -330,6 +359,13 @@ export function resetRooms() {
   isHost = false;
   members = [];
   api.setActiveRoomId(null);
+  const viewerLink = $("room-viewer-open");
+  if (viewerLink) {
+    viewerLink.hidden = true;
+    viewerLink.removeAttribute("href");
+    viewerLink.removeAttribute("aria-disabled");
+    viewerLink.removeAttribute("tabindex");
+  }
 }
 
 export function initRooms() {
@@ -354,20 +390,18 @@ export function initRooms() {
   const leave = $("room-leave");
   if (leave) leave.addEventListener("click", () => guard(leaveActiveRoom));
 
-  const viewerButton = $("room-viewer-open");
-  if (viewerButton) viewerButton.addEventListener("click", async () => {
+  const viewerCopyButton = $("room-viewer-copy");
+  if (viewerCopyButton) viewerCopyButton.addEventListener("click", async () => {
     if (!room?.is_public) {
       toast("O painel de visualização sem login exige uma sala pública.", "error");
       return;
     }
-    const url = new URL("./painel.html", location.href);
-    url.searchParams.set("sala", room.code);
-    url.searchParams.set("modo", "painel");
+    const url = roomViewerUrl();
     try {
-      await navigator.clipboard.writeText(url.href);
+      await navigator.clipboard.writeText(url);
       toast("Link do painel copiado. Qualquer pessoa com o link poderá acompanhar a sala.");
     } catch {
-      toast(`Não foi possível copiar. Link do painel: ${url.href}`, "error", 7000);
+      toast(`Não foi possível copiar. Link do painel: ${url}`, "error", 7000);
     }
   });
 
