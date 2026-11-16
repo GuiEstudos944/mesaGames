@@ -57,8 +57,12 @@ const clampScore = value => Math.max(-MAX_SCORE, Math.min(MAX_SCORE, Math.trunc(
 async function changeScore(player, delta) {
   player.score = clampScore(player.score + delta);
   state.scoreHistory.unshift({ player_id: player.id, delta, round: state.round, created_at: new Date().toISOString() });
-  scheduleSave(); renderScore();
-  try { await updatePlayerScore(player.id, player.score, delta, state.round); } catch (e) { console.error(e); }
+  // Grava só localmente e atualiza a tela. A pontuação vai para o servidor por
+  // delta (updatePlayerScore), o que evita "lost update" quando dois jogadores
+  // clicam ao mesmo tempo — por isso NÃO disparamos o salvamento do documento.
+  saveLocalState(); onChange(); renderScore();
+  try { await updatePlayerScore(player.id, player.score, delta, state.round); }
+  catch (e) { console.error(e); toast("Não foi possível sincronizar o placar. Os dados continuam salvos neste navegador.", "error"); }
 }
 export async function addPlayer() {
   if (state.players.length >= 12) return toast("O limite é de 12 jogadores.", "error");

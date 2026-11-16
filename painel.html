@@ -4,8 +4,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#191D27">
-  <meta name="description" content="Acompanhe uma partida MesaGames ao vivo.">
+  <meta name="description" content="Acompanhe uma partida MesaGames ao vivo: placar, rodada, cronômetro e dados em tempo real.">
   <title>Painel ao vivo · MesaGames</title>
+  <link rel="canonical" href="https://mesagames.vercel.app/painel.html">
+  <meta name="robots" content="index, follow">
+  <!-- Open Graph / redes sociais -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MesaGames">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Painel ao vivo · MesaGames">
+  <meta property="og:description"
+    content="Acompanhe placar, rodada, cronômetro e dados de uma partida MesaGames em tempo real.">
+  <meta property="og:url" content="https://mesagames.vercel.app/painel.html">
+  <meta property="og:image" content="https://mesagames.vercel.app/imgs/iconMesaGames.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Painel ao vivo · MesaGames">
+  <meta name="twitter:description"
+    content="Acompanhe placar, rodada, cronômetro e dados de uma partida MesaGames em tempo real.">
+  <meta name="twitter:image" content="https://mesagames.vercel.app/imgs/iconMesaGames.png">
+  <!-- Dados estruturados (JSON-LD é dado, não script executável: o CSP não bloqueia). -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Painel ao vivo · MesaGames",
+      "url": "https://mesagames.vercel.app/painel.html",
+      "inLanguage": "pt-BR",
+      "isPartOf": {
+        "@type": "WebApplication",
+        "name": "MesaGames",
+        "url": "https://mesagames.vercel.app/"
+      }
+    }
+  </script>
   <link rel="icon" type="image/png" href="./imgs/iconMesaGames.png">
   <script src="./js/painel-theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,7 +110,7 @@
 
   <section id="viewer-empty" class="viewer-empty" role="status" hidden>
     <img src="./imgs/iconMesaGames.png" alt="">
-    <h1>Sala não encontrada ou encerrada</h1>
+    <h2>Sala não encontrada ou encerrada</h2>
     <p>Confira o link ou peça ao anfitrião um novo painel de visualização.</p>
   </section>
 </body>

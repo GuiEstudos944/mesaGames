@@ -370,7 +370,7 @@ body.viewer-mode {
   border-radius: 0.875rem;
 }
 
-.viewer-empty h1 {
+.viewer-empty h2 {
   margin: 1rem 0 0.375rem;
   color: var(--text);
   font-size: clamp(1.125rem, 4vw, 1.5rem);

@@ -9,6 +9,7 @@ import {
 } from "./modal.js";
 import { isSupabaseConfigured, scheduleSync, setSyncStatusListener } from "./supabase.js";
 import { initAccount, isAdmin } from "./account.js";
+import { initHelp } from "./help.js";
 
 // Painéis que o usuário pode exibir ou ocultar em "Personalizar painéis".
 const PANELS = [
@@ -24,6 +25,7 @@ const STATUS = {
   saving: ["syncing", "Salvando…"],
   saved: ["online", "Salvo"],
   offline: ["offline", "Offline"],
+  conflict: ["syncing", "Atualizado por outro jogador"],
   error: ["offline", "Erro ao sincronizar"]
 };
 
@@ -151,6 +153,10 @@ function bindSyncIndicator() {
     if (status === "offline") {
       toast("Sem conexão. As alterações ficam salvas neste navegador e sincronizam depois.", "error", 4500);
     }
+    if (status === "conflict") {
+      // Outro jogador gravou antes: mantivemos o estado mais recente dele.
+      toast("A mesa foi atualizada por outro jogador. Confira os valores antes de continuar.", "error", 5000);
+    }
   });
 }
 
@@ -243,6 +249,7 @@ async function init() {
   initDice();
   initManagement();
   initLayout();
+  initHelp();
   document.getElementById("add-player").addEventListener("click", addPlayer);
   document.getElementById("reset-scores").addEventListener("click", resetScores);
 

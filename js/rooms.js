@@ -185,12 +185,13 @@ async function enterRoom(roomId) {
   isHost = data.host_id === user.id;
 
   api.setActiveSessionId(null);
-  api.setActiveRoomId(roomId, isHost);
+  api.setActiveRoomId(roomId, isHost, data.revision);
   setLocalScope(roomId);
 
   const doc = data.state && typeof data.state === "object" ? data.state : null;
   if (doc && Array.isArray(doc.players) && doc.players.length) {
     applySnapshot(doc);
+    api.setSyncedBase(doc);
     persistLocal();
     markClean();
     api.emitSyncStatus("saved");
@@ -209,6 +210,12 @@ async function enterRoom(roomId) {
     onStatus: status => {
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         setRoomsMessage("Conexão em tempo real instável. Tentando novamente…", true);
+      } else if (status === "SUBSCRIBED") {
+        // (Re)conectou: buscamos o estado atual antes de qualquer novo envio,
+        // para não sobrescrever o progresso feito enquanto estávamos fora.
+        setRoomsMessage("");
+        syncFromServer();
+        refreshMembers();
       }
     }
   });
@@ -229,6 +236,13 @@ function handleRoomChange(payload) {
     return;
   }
 
+  // A revisão avança a cada gravação: guardamos sempre a atual para que o nosso
+  // próximo envio otimista não seja recusado por motivo bobo.
+  if (payload.new?.revision != null) {
+    room = { ...room, revision: payload.new.revision };
+    api.setActiveRoomRevision(payload.new.revision);
+  }
+
   const doc = payload?.new?.state;
   const remoteAt = Date.parse(doc?.updatedAt || "") || 0;
   const localAt = Date.parse(state.updatedAt) || 0;
@@ -236,12 +250,40 @@ function handleRoomChange(payload) {
   // algo mais recente. Só aplicamos quando outro jogador gravou depois de nós.
   if (!doc || remoteAt <= localAt) return;
 
+  // Eco da NOSSA própria gravação (ex.: pontuação por RPC): aplica em silêncio,
+  // sem avisar "atualizado por outro jogador".
+  const ownEcho = api.isOwnWriteEcho();
+
   applySnapshot(doc);
+  api.setSyncedBase(doc);
   persistLocal();
   markClean();
-  room = { ...room, revision: payload.new.revision ?? room.revision };
   document.dispatchEvent(new CustomEvent("mesa:session-loaded", { detail: { name: `Sala ${room.name}` } }));
-  setRoomsMessage("A mesa foi atualizada por outro jogador.");
+  if (!ownEcho) setRoomsMessage("A mesa foi atualizada por outro jogador.");
+}
+
+/** Rebusca a sala no servidor e aplica a versão mais recente (usado ao
+ *  reconectar, para não perder o que os outros fizeram durante a queda). */
+async function syncFromServer() {
+  if (!room) return;
+  try {
+    const fresh = await api.loadRoom(room.id);
+    if (!fresh || fresh.status !== "open") return;
+    room = fresh;
+    api.setActiveRoomRevision(fresh.revision);
+    const doc = fresh.state && typeof fresh.state === "object" ? fresh.state : null;
+    const remoteAt = Date.parse(doc?.updatedAt || "") || 0;
+    const localAt = Date.parse(state.updatedAt) || 0;
+    if (doc && remoteAt > localAt) {
+      applySnapshot(doc);
+      api.setSyncedBase(doc);
+      persistLocal();
+      markClean();
+      document.dispatchEvent(new CustomEvent("mesa:session-loaded", { detail: { name: `Sala ${room.name}` } }));
+    }
+  } catch (error) {
+    console.warn("Não foi possível atualizar a sala ao reconectar:", error);
+  }
 }
 
 /** Sai da sala e devolve o usuário para a mesa local / partida anterior. */

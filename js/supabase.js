@@ -26,6 +26,15 @@ if (SUPABASE_CONFIGURED) {
 let activeSessionId = null;
 let activeRoomId = null;
 let activeRoomHost = false;
+// Revisão atual da sala: usada na gravação otimista (save_room_state) para
+// detectar quando outro jogador gravou antes de nós.
+let activeRoomRevision = null;
+// Último documento que sabemos estar gravado no servidor (base do merge de 3
+// vias, usado para reaplicar a nossa alteração quando há conflito de revisão).
+let lastSyncedDoc = null;
+// Janela curta após uma gravação nossa: o eco do Realtime que chega nela é
+// reconhecido como nosso e não vira o aviso "atualizado por outro jogador".
+let ownWriteUntil = 0;
 let syncTimer = null;
 let syncing = false;
 let pendingAgain = false;
@@ -257,7 +266,14 @@ export async function joinRoomByCode(code) {
   if (!client) throw new Error("Supabase não configurado.");
   const { data, error } = await client.rpc("join_room_by_code", { p_code: String(code || "").trim().toUpperCase() });
   if (error) throw error;
-  return data;
+  // A versão nova da RPC devolve um OBJETO { ok, room_id, error } (assim o banco
+  // registra a tentativa mesmo quando falha e o limite funciona). A versão
+  // antiga devolvia o uuid direto. Aceitamos os dois formatos para funcionar
+  // mesmo antes do SQL de segurança ser aplicado.
+  if (typeof data === "string") return data;
+  const result = data ?? {};
+  if (!result.ok) throw new Error(result.error || "Não foi possível entrar na sala.");
+  return result.room_id ?? null;
 }
 
 /** Entra em uma sala pública listada. */
@@ -282,8 +298,39 @@ export async function loadRoom(id) {
   return data ?? null;
 }
 
+/** Grava o documento da sala com concorrência otimista.
+ *  Envia a revisão conhecida; se a sala já tiver avançado, o servidor recusa e
+ *  devolve o estado atual — assim nunca sobrescrevemos a mudança de outro
+ *  jogador sem perceber. Erro com `code === "REVISION_CONFLICT"` sinaliza isso. */
 export async function saveRoomState(id, stateDoc) {
   if (!client) return null;
+  const { data, error } = await client.rpc("save_room_state", {
+    p_room: id,
+    p_state: stateDoc,
+    p_expected_revision: activeRoomRevision
+  });
+  if (error) {
+    // Compatibilidade: antes do SQL de segurança ser aplicado a RPC não existe.
+    if (isMissingFunction(error)) return saveRoomStateDirect(id, stateDoc);
+    throw error;
+  }
+  const result = data ?? {};
+  if (result.ok) {
+    if (result.revision != null) activeRoomRevision = Number(result.revision);
+    return result;
+  }
+  if (result.conflict) {
+    activeRoomRevision = result.revision != null ? Number(result.revision) : activeRoomRevision;
+    const conflict = new Error("A sala foi alterada por outro jogador.");
+    conflict.code = "REVISION_CONFLICT";
+    conflict.remoteState = result.state ?? null;
+    throw conflict;
+  }
+  throw new Error(result.error || "Sala não encontrada ou sem permissão de escrita.");
+}
+
+/** Caminho antigo (UPDATE direto), usado só enquanto a RPC não estiver aplicada. */
+async function saveRoomStateDirect(id, stateDoc) {
   const { data, error } = await client.from(ROOM_TABLE)
     .update({ state: stateDoc })
     .eq("id", id)
@@ -291,6 +338,7 @@ export async function saveRoomState(id, stateDoc) {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Sala não encontrada ou sem permissão de escrita.");
+  if (data.revision != null) activeRoomRevision = Number(data.revision);
   return data;
 }
 
@@ -408,14 +456,32 @@ export function setActiveSessionId(id) {
   if (activeSessionId) {
     activeRoomId = null;
     activeRoomHost = false;
+    activeRoomRevision = null;
+    lastSyncedDoc = null;
   }
 }
 export function getActiveRoomId() { return activeRoomId; }
-export function setActiveRoomId(id, isHost = false) {
+export function setActiveRoomId(id, isHost = false, revision = null) {
   activeRoomId = id || null;
   activeRoomHost = Boolean(activeRoomId && isHost);
+  activeRoomRevision = (activeRoomId && revision != null && Number.isFinite(Number(revision)))
+    ? Number(revision)
+    : null;
+  lastSyncedDoc = null;
   if (activeRoomId) activeSessionId = null;
 }
+/** Atualiza a revisão conhecida da sala (chamado pelo listener em tempo real). */
+export function setActiveRoomRevision(revision) {
+  activeRoomRevision = (revision != null && Number.isFinite(Number(revision))) ? Number(revision) : null;
+}
+/** Registra o documento que agora sabemos estar salvo no servidor (base do merge). */
+export function setSyncedBase(doc) {
+  lastSyncedDoc = doc && typeof doc === "object" ? doc : null;
+}
+/** Marca que estamos no meio de uma gravação própria (engole o eco do Realtime). */
+export function noteOwnWrite() { ownWriteUntil = Date.now() + 2000; }
+/** true enquanto o eco esperado é resultado da NOSSA própria gravação. */
+export function isOwnWriteEcho() { return Date.now() < ownWriteUntil; }
 export function canControlActiveTimer() {
   return activeRoomId ? activeRoomHost : Boolean(activeSessionId);
 }
@@ -426,6 +492,58 @@ function buildPayload() {
   if (JSON.stringify(doc).length > MAX_PAYLOAD) doc.scoreHistory = doc.scoreHistory.slice(-100);
   if (JSON.stringify(doc).length > MAX_PAYLOAD) doc.diceHistory = doc.diceHistory.slice(0, 3);
   return doc;
+}
+
+/**
+ * Merge de 3 vias (base, nosso documento local, documento remoto).
+ * Usado quando a gravação otimista detecta que outro jogador gravou antes:
+ * em vez de descartar a nossa alteração, reaplicamos sobre o estado NOVO do
+ * servidor só o que NÓS mudamos desde a última gravação confirmada.
+ * Devolve `null` quando não há base confiável (aí mantemos o comportamento
+ * antigo: aplica o remoto e avisa o usuário).
+ */
+function mergeLocalOverRemote(base, local, remote) {
+  if (!base || typeof base !== "object") return null;
+  if (!local || typeof local !== "object") return null;
+  if (!remote || typeof remote !== "object") return null;
+
+  const merged = { ...remote };
+
+  // Campos de controle da mesa: só sobrescrevem o remoto quando NÓS mudamos.
+  for (const key of ["round", "turn", "starterIndex"]) {
+    if (local[key] !== base[key]) merged[key] = local[key];
+  }
+  // Preferências visuais.
+  if (local.theme !== base.theme) merged.theme = local.theme;
+  if (JSON.stringify(local.panels) !== JSON.stringify(base.panels)) merged.panels = local.panels;
+
+  // Jogadores: aplica inclusões/remoções/renomeações feitas por nós, mantendo
+  // do servidor a pontuação dos que já existiam (a pontuação vai por RPC).
+  if (Array.isArray(local.players)) {
+    const baseById = new Map((base.players || []).map(p => [p?.id, p]));
+    const remoteById = new Map((remote.players || []).map(p => [p?.id, p]));
+    const mudou = local.players.some(p => {
+      const b = baseById.get(p?.id);
+      return !b || b.name !== p.name || b.color !== p.color;
+    }) || (base.players || []).some(b => !local.players.some(p => p?.id === b?.id));
+    if (mudou) {
+      merged.players = local.players.map(p => {
+        const r = remoteById.get(p?.id);
+        return r ? { ...p, score: r.score } : { ...p };
+      });
+    }
+  }
+
+  // Rolagens de dados: acrescenta ao topo as nossas que ainda não existiam.
+  const baseRolls = new Set((base.diceHistory || []).map(d => d?.at));
+  const novas = (local.diceHistory || []).filter(d => d?.at && !baseRolls.has(d.at));
+  if (novas.length) {
+    const novasAt = new Set(novas.map(d => d.at));
+    merged.diceHistory = [...novas, ...(remote.diceHistory || []).filter(d => !novasAt.has(d?.at))].slice(0, 10);
+  }
+
+  merged.updatedAt = new Date().toISOString();
+  return merged;
 }
 
 /** Agenda um auto-save com debounce (sem disparar requisição a cada clique). */
@@ -453,8 +571,49 @@ export async function syncNow() {
   try {
     const payload = buildPayload();
     // Dentro de uma sala o documento vai para a sala; fora dela, para a partida.
-    if (activeRoomId) await saveRoomState(activeRoomId, payload);
-    else await saveGameSessionState(activeSessionId, payload);
+    const save = doc => activeRoomId
+      ? saveRoomState(activeRoomId, doc)
+      : saveGameSessionState(activeSessionId, doc);
+
+    try {
+      await save(payload);
+    } catch (error) {
+      if (error?.code !== "REVISION_CONFLICT") throw error;
+
+      // Outro jogador gravou primeiro. Em vez de descartar a nossa alteração,
+      // reaplicamos ela sobre o estado NOVO do servidor (merge de 3 vias) e
+      // tentamos gravar UMA vez mais. saveRoomState já atualizou a revisão
+      // conhecida para a do remoto, então a segunda tentativa usa a base certa.
+      const merged = mergeLocalOverRemote(lastSyncedDoc, payload, error.remoteState);
+      if (merged) {
+        applySnapshot(merged);
+        persistLocal();
+        const retryPayload = buildPayload();
+        try {
+          await save(retryPayload);
+          lastSyncedDoc = retryPayload;
+          markClean();
+          persistLocal();
+          emitSyncStatus("saved");
+          return true;
+        } catch (retryError) {
+          if (retryError?.code !== "REVISION_CONFLICT") throw retryError;
+          // Colidiu de novo: desistimos e avisamos o usuário.
+          if (retryError.remoteState) { applySnapshot(retryError.remoteState); persistLocal(); }
+          markClean();
+          emitSyncStatus("conflict");
+          return false;
+        }
+      }
+
+      // Sem base confiável para mesclar: mantém o comportamento antigo.
+      if (error.remoteState) { applySnapshot(error.remoteState); persistLocal(); }
+      markClean();
+      emitSyncStatus("conflict");
+      return false;
+    }
+
+    lastSyncedDoc = payload;
     markClean();
     persistLocal();
     emitSyncStatus("saved");
@@ -506,6 +665,7 @@ export async function openSession(id) {
       return { source: "local", session: remote };
     }
     applySnapshot(remoteDoc);
+    setSyncedBase(remoteDoc);
     persistLocal();
     emitSyncStatus("saved");
     return { source: "remote", session: remote };
@@ -524,13 +684,50 @@ export function leaveRemoteSession() {
   activeSessionId = null;
   activeRoomId = null;
   activeRoomHost = false;
+  activeRoomRevision = null;
+  lastSyncedDoc = null;
+}
+
+/** Busca o estado remoto antes de enviar o local (usado ao reconectar).
+ *  Evita sobrescrever o progresso que os outros jogadores fizeram enquanto
+ *  ficamos offline. Se tivermos alterações locais não enviadas, só aplicamos o
+ *  remoto quando ele for comprovadamente mais recente. */
+async function pullRemoteState() {
+  if (!client) return;
+  const applyIfNewer = (doc, fallbackAt) => {
+    if (!doc || typeof doc !== "object") return;
+    const remoteAt = Date.parse(doc.updatedAt || fallbackAt || "") || 0;
+    const localAt = Date.parse(state.updatedAt) || 0;
+    if (!state.dirty || remoteAt > localAt) {
+      applySnapshot(doc);
+      setSyncedBase(doc);
+      persistLocal();
+      markClean();
+    }
+  };
+  try {
+    if (activeRoomId) {
+      const remote = await loadRoom(activeRoomId);
+      if (!remote || remote.status !== "open") return;
+      if (remote.revision != null) activeRoomRevision = Number(remote.revision);
+      applyIfNewer(remote.state, remote.updated_at);
+    } else if (activeSessionId) {
+      const remote = await loadGameSession(activeSessionId);
+      if (!remote) return;
+      applyIfNewer(remote.state, remote.updated_at);
+    }
+  } catch (error) {
+    console.warn("Não foi possível buscar o estado remoto ao reconectar:", error);
+  }
 }
 
 if (typeof window !== "undefined") {
   window.addEventListener("offline", () => emitSyncStatus("offline"));
-  window.addEventListener("online", () => {
+  window.addEventListener("online", async () => {
     if (!activeRoomId && !activeSessionId) return;
-    if (state.dirty) scheduleSync(); else syncNow();
+    // Primeiro reconciliamos com o servidor; só depois enviamos o que é local.
+    await pullRemoteState();
+    if (state.dirty) scheduleSync();
   });
 }
 
@@ -541,4 +738,41 @@ if (typeof window !== "undefined") {
 export async function savePlayers() { scheduleSync(); }
 export async function saveGameState() { scheduleSync(); }
 export async function insertDiceRoll() { scheduleSync(); }
-export async function updatePlayerScore() { scheduleSync(); }
+
+/** Pontuação. Dentro de uma sala o delta é aplicado ATOMICAMENTE no servidor
+ *  (evita "lost update" quando dois jogadores pontuam ao mesmo tempo); fora da
+ *  sala o documento inteiro da partida é salvo com debounce, como antes. */
+export async function updatePlayerScore(playerId, score, delta, round) {
+  if (!client) return null;
+  if (activeRoomId) {
+    // Abre a janela que reconhece o eco do Realtime desta gravação como nosso
+    // (evita o aviso "atualizado por outro jogador" numa corrida de rede).
+    noteOwnWrite();
+    const { data, error } = await client.rpc("add_player_score", {
+      p_room: activeRoomId,
+      p_player_id: String(playerId || ""),
+      p_delta: Math.trunc(Number(delta) || 0),
+      p_round: Math.trunc(Number(round) || 1)
+    });
+    if (error) {
+      // Compatibilidade: sem a RPC aplicada, cai no salvamento do documento.
+      if (isMissingFunction(error)) { scheduleSync(); return null; }
+      throw error;
+    }
+    const result = data ?? {};
+    if (!result.ok) {
+      // Ex.: jogador recém-adicionado que ainda não chegou ao servidor. Nesse
+      // caso caímos no salvamento do documento, que envia a lista completa.
+      console.warn("Pontuação não aplicada pelo servidor:", result.error);
+      scheduleSync();
+      return null;
+    }
+    if (result.revision != null) activeRoomRevision = Number(result.revision);
+    // Iguala nosso carimbo ao do servidor: o eco em tempo real desta própria
+    // gravação deixa de ser confundido com "atualização de outro jogador".
+    if (result.updated_at) state.updatedAt = result.updated_at;
+    return result;
+  }
+  scheduleSync();
+  return null;
+}

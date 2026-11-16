@@ -1375,6 +1375,242 @@ body.is-loading {
   color: var(--green);
 }
 
+/* ==================================================== AJUDA / COMO USAR */
+/* Botão de ajuda na navbar (ao lado de "Entrar"). Alvo de toque de 44x44px. */
+.help-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface-2);
+  color: var(--accent);
+  transition: background .18s ease, border-color .18s ease, transform .12s ease;
+}
+
+.help-button:hover {
+  background: var(--surface-3);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.help-button:active {
+  transform: scale(.96);
+}
+
+.help-button .bi {
+  font-size: 1.375rem;
+}
+
+.help-button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+/* Painel sobreposto: reaproveita a base do diálogo da conta, mas a visibilidade
+   é controlada por classe (não pelo atributo hidden), para o texto "Como usar"
+   continuar no DOM (indexável) mesmo com o painel fechado. */
+.help-dialog {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .28s ease, visibility 0s linear .28s;
+}
+
+.help-dialog.is-open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity .28s ease, visibility 0s;
+}
+
+/* Seletor com duas classes para vencer o `.account-box` (mesma largura mínima)
+   que vem depois no arquivo. Sem isso o width do help-box era sobrescrito. */
+.account-box.help-box {
+  width: min(100%, 40rem);
+  transform: translateY(0.75rem) scale(.97);
+  transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+}
+
+.help-dialog.is-open .help-box {
+  transform: translateY(0) scale(1);
+}
+
+/* Em telas largas o painel de ajuda ocupa ~80% da largura da tela. */
+@media (min-width: 68.76em) {
+  .account-box.help-box {
+    width: 80vw;
+  }
+}
+
+/* Trava a rolagem do fundo enquanto o painel está aberto. */
+body.help-open {
+  overflow: hidden;
+}
+
+/* --- passos do "como usar" --- */
+.how-to-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.how-to-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  background: var(--surface-3);
+}
+
+.how-to-step {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+  color: var(--accent);
+  font-family: var(--font-numeric);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.how-to-step-body {
+  min-width: 0;
+}
+
+.how-to-step-body b {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+
+.how-to-step-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+}
+
+.how-to-step-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* --- FAQ: acordeão animado (button + aria-expanded) --- */
+.faq-title {
+  margin: 1.5rem 0 0.75rem;
+  color: var(--text);
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.faq-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.faq-item {
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.faq-heading {
+  margin: 0;
+  font-size: inherit;
+}
+
+.faq-question {
+  width: 100%;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.faq-question:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.faq-question .bi {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 1.125rem;
+  transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+}
+
+.faq-item.is-open .faq-question .bi {
+  transform: rotate(45deg);
+}
+
+/* Altura animada por grid-template-rows 0fr -> 1fr (sem medir em JS). */
+.faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .28s cubic-bezier(.4, 0, .2, 1);
+}
+
+.faq-answer-inner {
+  min-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: visibility 0s linear .28s;
+}
+
+.faq-item.is-open .faq-answer {
+  grid-template-rows: 1fr;
+}
+
+.faq-item.is-open .faq-answer-inner {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.faq-answer p {
+  margin: 0;
+  padding: 0 1rem 0.875rem;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+.faq-answer p strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Sem animação para quem pediu menos movimento no sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .help-dialog,
+  .help-box,
+  .faq-answer,
+  .faq-answer-inner,
+  .faq-question .bi {
+    transition: none;
+  }
+}
+
 /* ================================================================== FOOTER */
 .site-footer {
   display: flex;
@@ -2313,6 +2549,10 @@ body.is-loading {
 
   .panel {
     padding: 1rem;
+  }
+
+  .how-to-steps {
+    grid-template-columns: 1fr;
   }
 
   .management-grid {

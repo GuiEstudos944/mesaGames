@@ -1,0 +1,5 @@
+# MesaGames — https://mesagames.vercel.app
+User-agent: *
+Allow: /
+
+Sitemap: https://mesagames.vercel.app/sitemap.xml

@@ -5,7 +5,90 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#191D27">
-  <title>MesaGames</title>
+  <title>MesaGames — Placar, rodadas, dados e cronômetro para jogos de tabuleiro</title>
+  <meta name="description"
+    content="Placar, rodadas, cronômetro e dados 2D para seus jogos de tabuleiro e RPG. Use sem conta no navegador e sincronize a mesa em tempo real.">
+  <link rel="canonical" href="https://mesagames.vercel.app/">
+  <meta name="robots" content="index, follow">
+  <!-- Open Graph / redes sociais -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MesaGames">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="MesaGames — ferramentas para a sua mesa de jogo">
+  <meta property="og:description"
+    content="Placar, rodadas, cronômetro e dados 2D em um só lugar, com sincronização em tempo real entre os jogadores.">
+  <meta property="og:url" content="https://mesagames.vercel.app/">
+  <meta property="og:image" content="https://mesagames.vercel.app/imgs/iconMesaGames.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MesaGames — ferramentas para a sua mesa de jogo">
+  <meta name="twitter:description"
+    content="Placar, rodadas, cronômetro e dados 2D em um só lugar, com sincronização em tempo real entre os jogadores.">
+  <meta name="twitter:image" content="https://mesagames.vercel.app/imgs/iconMesaGames.png">
+  <!-- Dados estruturados (JSON-LD é dado, não script executável: o CSP não bloqueia). -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "MesaGames",
+      "url": "https://mesagames.vercel.app/",
+      "description": "Placar, controle de rodadas, cronômetro e dados 2D para jogos de tabuleiro e RPG, com salas sincronizadas em tempo real.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "pt-BR",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+      "image": "https://mesagames.vercel.app/imgs/iconMesaGames.png"
+    }
+  </script>
+  <!-- FAQ estruturado: as perguntas/respostas existem no HTML e ficam acessíveis
+       pelo botão "Como usar" (o CSP não bloqueia JSON-LD, que é dado, não script). -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Preciso criar conta para usar?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Não. Sem login tudo funciona e o progresso fica salvo apenas neste navegador. A conta é opcional: com ela, as partidas vão para a nuvem e ficam disponíveis em outros aparelhos."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Como jogar com mais gente na mesma mesa?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Entre na sua conta, abra \"Salas online\", crie uma sala e compartilhe o código (8 caracteres) ou as salas abertas. Placar, rodadas, relógio e dados passam a sincronizar em tempo real para todos os participantes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "O que é o painel de visualização?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "É uma aba só de leitura que acompanha a sala ao vivo — útil para mostrar a mesa em uma TV ou segundo aparelho. O atalho aparece no cabeçalho das salas públicas."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Meus dados ficam guardados em algum lugar?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sem conta, tudo fica no localStorage do próprio navegador. Com conta, o estado da partida é guardado no banco (Supabase) e protegido por políticas de acesso por usuário."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "É gratuito?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sim. O MesaGames é gratuito e feito para as suas partidas, sem anúncios dentro da mesa."
+          }
+        }
+      ]
+    }
+  </script>
   <link rel="icon" type="image/png" href="./imgs/iconMesaGames.png">
   <link rel="apple-touch-icon" href="./imgs/iconMesaGames.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,6 +143,10 @@
       <div class="top-actions">
         <span id="connection-status" class="connection offline" aria-live="polite"><i></i><span>Local · sem
             conta</span></span>
+        <button id="help-open" class="help-button" type="button" aria-label="Ajuda e perguntas frequentes"
+          aria-expanded="false" aria-controls="help-dialog" title="Como usar">
+          <i class="bi bi-question-circle" aria-hidden="true"></i>
+        </button>
         <button id="account-open" class="account-button" type="button" title="Conta e partidas salvas">
           <span class="account-icon" aria-hidden="true">
             <i class="bi bi-person-fill" aria-hidden="true"></i>
@@ -517,6 +604,136 @@
       </p>
       <div id="layout-options" class="layout-options"></div>
       <button id="layout-show-all" class="text-button full" type="button">Mostrar todos os painéis</button>
+    </section>
+  </div>
+
+  <!-- =============================================== DIALOG: AJUDA / COMO USAR -->
+  <!-- O conteúdo fica sempre no HTML (indexável). A visibilidade é controlada por
+       CSS (classe .is-open): nada de display:none permanente nem atributo hidden. -->
+  <div id="help-dialog" class="account-dialog help-dialog">
+    <div class="account-backdrop" data-close></div>
+    <section class="account-box help-box" role="dialog" aria-modal="true" aria-labelledby="how-to-title" tabindex="-1">
+      <header class="account-head">
+        <div>
+          <p class="eyebrow">
+            <i class="bi bi-question-circle-fill" aria-hidden="true"></i>
+            COMO USAR
+          </p>
+          <h2 id="how-to-title">Da mesa vazia à partida rolando</h2>
+        </div>
+        <button id="help-close" class="icon-button" type="button" aria-label="Fechar ajuda e perguntas frequentes">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </header>
+      <p class="muted small">Nada para instalar. Funciona no celular e no computador.</p>
+
+      <ol class="how-to-steps">
+        <li class="how-to-step-item">
+          <span class="how-to-step" aria-hidden="true">1</span>
+          <div class="how-to-step-body">
+            <b>Monte o placar</b>
+            <p>No painel <strong>Placar</strong>, toque em "Adicionar jogador" e ajuste os nomes. A mesa aceita até 12
+              jogadores e usa <strong>+1</strong>, <strong>+5</strong>, <strong>+10</strong> e os negativos para pontuar.</p>
+          </div>
+        </li>
+        <li class="how-to-step-item">
+          <span class="how-to-step" aria-hidden="true">2</span>
+          <div class="how-to-step-body">
+            <b>Controle as rodadas</b>
+            <p>Em <strong>Rodadas</strong>, use "Próximo turno" para passar a vez e "Avançar rodada" para fechar a
+              rodada. O destaque mostra de quem é a vez.</p>
+          </div>
+        </li>
+        <li class="how-to-step-item">
+          <span class="how-to-step" aria-hidden="true">3</span>
+          <div class="how-to-step-body">
+            <b>Marque o tempo</b>
+            <p>O <strong>Relógio</strong> tem cronômetro (tempo para cima) e temporizador (contagem regressiva). Quem
+              abre a sala inicia, pausa e zera.</p>
+          </div>
+        </li>
+        <li class="how-to-step-item">
+          <span class="how-to-step" aria-hidden="true">4</span>
+          <div class="how-to-step-body">
+            <b>Role os dados</b>
+            <p>Em <strong>Dados</strong>, escolha os tipos (d4 a d100), some um modificador e toque em "Rolar dados". As
+              últimas rolagens ficam no histórico.</p>
+          </div>
+        </li>
+      </ol>
+
+      <h3 id="faq-title" class="faq-title">Perguntas frequentes</h3>
+      <div class="faq-list">
+        <div class="faq-item">
+          <h4 class="faq-heading">
+            <button id="faq-question-1" class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-1">
+              <span>Preciso criar conta para usar?</span>
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </h4>
+          <div id="faq-answer-1" class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>Não. Sem login tudo funciona e o progresso fica salvo apenas neste navegador. A conta é opcional: com
+                ela, as partidas vão para a nuvem e ficam disponíveis em outros aparelhos.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <h4 class="faq-heading">
+            <button id="faq-question-2" class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-2">
+              <span>Como jogar com mais gente na mesma mesa?</span>
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </h4>
+          <div id="faq-answer-2" class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>Entre na sua conta, abra "Salas online", crie uma sala e compartilhe o código (8 caracteres) ou as salas
+                abertas. Placar, rodadas, relógio e dados passam a sincronizar em tempo real para todos os participantes.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <h4 class="faq-heading">
+            <button id="faq-question-3" class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-3">
+              <span>O que é o painel de visualização?</span>
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </h4>
+          <div id="faq-answer-3" class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>É uma aba só de leitura que acompanha a sala ao vivo — útil para mostrar a mesa em uma TV ou segundo
+                aparelho. O atalho aparece no cabeçalho das salas públicas.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <h4 class="faq-heading">
+            <button id="faq-question-4" class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-4">
+              <span>Meus dados ficam guardados em algum lugar?</span>
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </h4>
+          <div id="faq-answer-4" class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>Sem conta, tudo fica no <strong>localStorage</strong> do próprio navegador. Com conta, o estado da
+                partida é guardado no banco (Supabase) e protegido por políticas de acesso por usuário.</p>
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <h4 class="faq-heading">
+            <button id="faq-question-5" class="faq-question" type="button" aria-expanded="false" aria-controls="faq-answer-5">
+              <span>É gratuito?</span>
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+          </h4>
+          <div id="faq-answer-5" class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>Sim. O MesaGames é gratuito e feito para as suas partidas, sem anúncios dentro da mesa.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 
