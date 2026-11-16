@@ -28,6 +28,12 @@ export const AUTH_REDIRECT_URL = String(injected.AUTH_REDIRECT_URL || "").trim()
 
 export const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
+// Google Tag Manager: ID do contêiner (ex.: GTM-N9P6PJLH). Vazio = analytics
+// desligado. O GA4 é configurado dentro do GTM, então o ID G-... não vai no código.
+export const ANALYTICS_ID = String(injected.ANALYTICS_ID || "").trim();
+// Flag de ativação. Mesmo com "true", o GTM só carrega após o consentimento LGPD.
+export const ANALYTICS_ENABLED = injected.ANALYTICS_ENABLED === true;
+
 // Único e-mail autorizado a ver a seção "Configurações / Dados e Banco".
 // Vem da variável de ambiente ADMIN_EMAIL. Vazio = a seção não aparece para
 // ninguém. Atenção: esta checagem é apenas visual (ver README > Segurança).

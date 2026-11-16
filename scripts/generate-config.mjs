@@ -45,6 +45,8 @@ const url = pick("SUPABASE_URL");
 const anonKey = pick("SUPABASE_ANON_KEY");
 const redirect = pick("AUTH_REDIRECT_URL");
 const adminEmail = pick("ADMIN_EMAIL");
+const analyticsId = pick("ANALYTICS_ID");
+const analyticsEnabled = pick("ANALYTICS_ENABLED");
 
 if (process.env.VERCEL && (!url || !anonKey)) {
   console.error(
@@ -86,6 +88,20 @@ function assertPublicKey(key) {
 
 assertPublicKey(anonKey);
 
+// Valida o formato do ID do GTM (ex.: GTM-N9P6PJLH). Sem validação, um ID
+// inválido faria o analytics.js injetar uma URL quebrada no <head>.
+const GTM_RE = /^GTM-[A-Z0-9]+$/;
+if (analyticsId && !GTM_RE.test(analyticsId)) {
+  console.error(
+    `⛔ ANALYTICS_ID inválido: "${analyticsId}". Use o formato GTM-XXXXXXXX.`
+  );
+  process.exit(1);
+}
+
+// ANALYTICS_ENABLED: aceita "true"/"1"/"yes" (case-insensitive); qualquer
+// outro valor (incluindo vazio) desliga o analytics.
+const analyticsOn = /^(true|1|yes)$/i.test(analyticsEnabled);
+
 // Nenhuma variável pode carregar um segredo do Supabase para o front-end.
 for (const [key, value] of [["SUPABASE_URL", url], ["SUPABASE_ANON_KEY", anonKey], ["ADMIN_EMAIL", adminEmail]]) {
   if (/service_role|secret|private_key/i.test(value)) {
@@ -99,9 +115,12 @@ if (url) env.SUPABASE_URL = url;
 if (anonKey) env.SUPABASE_ANON_KEY = anonKey;
 if (redirect) env.AUTH_REDIRECT_URL = redirect;
 if (adminEmail) env.ADMIN_EMAIL = adminEmail;
+// Analytics: só grava o ID se houver um ID válido E o flag estiver ligado.
+if (analyticsId && analyticsOn) env.ANALYTICS_ID = analyticsId;
+env.ANALYTICS_ENABLED = analyticsOn;
 
 const body = `// Arquivo gerado por scripts/generate-config.mjs — não edite manualmente.
-// Contém apenas a chave PÚBLICA do Supabase (anon / publishable).
+// Contém apenas a chave PÚBLICA do Supabase (anon / publishable) e o ID do GTM.
 globalThis.MESAGAMES_ENV = ${JSON.stringify(env, null, 2)};
 `;
 

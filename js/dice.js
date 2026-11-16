@@ -10,6 +10,7 @@
 import { state, saveLocalState } from "./state.js";
 import { confirmarModal, toast } from "./modal.js";
 import { insertDiceRoll, scheduleSync } from "./supabase.js";
+import { track } from "./analytics.js";
 
 /* --------------------------------------------------------------- constantes */
 
@@ -435,6 +436,7 @@ function finalizarRolagem(specs, modifier, { registrar }) {
   state.diceHistory = state.diceHistory.slice(0, 10);
   saveLocalState();
   renderHistory();
+  track("dados_rolados", { qtd: specs.length, total });
   insertDiceRoll(entrada).catch(error => {
     console.error(error);
     toast("Rolagem salva localmente; falha ao sincronizar.", "error");

@@ -6,6 +6,7 @@ import {
 } from "./supabase.js";
 import { displayedTimerMs, formatTimerMs, normalizeTimerState } from "./timer-core.js";
 import { playTimerAlert, primeTimerAudio } from "./timer-audio.js";
+import { track } from "./analytics.js";
 
 const $ = id => document.getElementById(id);
 let clockOffsetMs = 0;
@@ -271,7 +272,9 @@ export function initTimer() {
 
   $("timer-toggle")?.addEventListener("click", () => {
     primeTimerAudio();
-    performAction(state.timer.status === "running" ? "pause" : "start");
+    const starting = state.timer.status !== "running";
+    performAction(starting ? "start" : "pause");
+    if (starting) track("cronometro_iniciado", { modo: state.timer.mode });
   });
   $("timer-reset")?.addEventListener("click", () => performAction("reset"));
   ["timer-minutes", "timer-seconds"].forEach(id => {

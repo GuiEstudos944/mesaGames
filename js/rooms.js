@@ -10,6 +10,7 @@ import {
   setLocalScope, loadLocalState, resetGameState, createDefaultPlayers
 } from "./state.js";
 import { toast, confirmarModal } from "./modal.js";
+import { track } from "./analytics.js";
 
 const $ = id => document.getElementById(id);
 const show = (el, visible) => { if (el) el.hidden = !visible; };
@@ -323,6 +324,7 @@ async function createRoom() {
   setRoomsMessage("");
   document.dispatchEvent(new CustomEvent("mesa:room-created"));
   toast(`Sala criada! Compartilhe o código ${created.code}.`, "success", 6000);
+  track("sala_criada", { publica: isPublic });
 }
 
 async function joinPublicRoom(id) {
@@ -331,6 +333,7 @@ async function joinPublicRoom(id) {
   await enterRoom(id);
   setRoomsMessage("");
   toast("Você entrou na sala.");
+  track("sala_entrada", { tipo: "publica" });
 }
 
 async function joinByCode() {
@@ -342,6 +345,7 @@ async function joinByCode() {
   await enterRoom(id);
   setRoomsMessage("");
   toast("Você entrou na sala.");
+  track("sala_entrada", { tipo: "codigo" });
 }
 
 async function leaveActiveRoom() {

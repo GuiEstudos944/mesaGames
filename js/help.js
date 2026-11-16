@@ -4,6 +4,7 @@
 // para o texto continuar no DOM mesmo com o painel fechado.
 // CSP: sem 'unsafe-inline' — nenhum style="" nem setAttribute("style").
 import { registerModalLayer, unregisterModalLayer } from "./modal.js";
+import { track } from "./analytics.js";
 
 const HELP_KEY = "help-dialog";
 
@@ -15,10 +16,9 @@ let lastFocused = null;
 
 const isOpen = () => dialog?.classList.contains("is-open") ?? false;
 
-/** Bloco (c): só dispara quando o módulo de analytics existir. */
+/** Bloco (c): dispara evento quando o painel de ajuda é aberto. */
 function trackHelpOpen() {
-  const analytics = globalThis.mesagamesAnalytics;
-  if (analytics && typeof analytics.track === "function") analytics.track("ajuda_aberta");
+  track("ajuda_aberta");
 }
 
 function resetFaq() {

@@ -1,6 +1,7 @@
 import { state, playerColors, saveLocalState } from "./state.js";
 import { confirmarModal, editarNomeModal, toast } from "./modal.js";
 import { savePlayers, updatePlayerScore } from "./supabase.js";
+import { track } from "./analytics.js";
 
 let onChange = () => {};
 let debounceId;
@@ -68,6 +69,7 @@ export async function addPlayer() {
   if (state.players.length >= 12) return toast("O limite é de 12 jogadores.", "error");
   const i = state.players.length, player = { id: crypto.randomUUID(), name: `Jogador ${i + 1}`, score: 0, color: playerColors()[i] };
   state.players.push(player); scheduleSave(); renderScore(); toast("Jogador adicionado.");
+  track("jogador_adicionado", { total: state.players.length });
 }
 export async function resetScores() {
   if (!await confirmarModal({ title: "Zerar pontos?", message: "Todos os jogadores voltarão para zero pontos. Os jogadores serão mantidos.", confirmText: "Zerar pontos", danger: true })) return;
