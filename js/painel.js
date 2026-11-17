@@ -30,6 +30,8 @@ function setConnection(state, label) {
 
 function hideLoader() {
   const loader = $("app-loader");
+  // Avisa o guard independente para ele não repetir o trabalho aos 3s.
+  window.__mesaLoaderGuard?.markHidden();
   if (!loader) return;
   const delay = Math.max(0, 600 - (Date.now() - loaderStartedAt));
   window.setTimeout(() => {

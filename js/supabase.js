@@ -18,9 +18,16 @@ const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem I, O, 0 e 
 
 let client = null;
 if (SUPABASE_CONFIGURED) {
-  client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-  });
+  // try/catch: se o SDK falhar (bloqueado por CSP/adblock, rede fora), o app
+  // continua funcionando em modo local em vez de quebrar a inicialização.
+  try {
+    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+  } catch (error) {
+    console.error(error);
+    client = null;
+  }
 }
 
 let activeSessionId = null;

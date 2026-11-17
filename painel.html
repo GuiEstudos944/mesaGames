@@ -39,6 +39,9 @@
   </script>
   <link rel="icon" type="image/png" href="./imgs/iconMesaGames.png">
   <script src="./js/painel-theme.js"></script>
+  <!-- Rede de segurança: garante que o loader sempre desapareça, mesmo se um
+       módulo for bloqueado (CSP/adblock) ou travar. Precisa rodar antes dos módulos. -->
+  <script src="./js/loader-guard.js"></script>
   <!-- Fontes: só os pesos realmente usados no CSS (400, 600, 700, 800, 900). -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

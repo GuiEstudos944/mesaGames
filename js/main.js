@@ -262,10 +262,11 @@ async function init() {
 }
 
 /* ------------------------------------------------------------- loader */
-// Remove o loader de carregamento quando a página + conta/Supabase estiverem prontos.
-// Respeita tempo mínimo de 600ms e máximo de 4s (fallback do localStorage).
+// O loader some quando a inicialização termina (init). Há ainda um teto de
+// segurança de 3s e um guard independente (loader-guard.js) para o caso de um
+// módulo ser bloqueado e este código nunca rodar.
 const LOADER_MIN_MS = 600;
-const LOADER_MAX_MS = 4000;
+const LOADER_MAX_MS = 3000;
 const loaderStart = Date.now();
 let loaderHidden = false;
 
@@ -279,6 +280,8 @@ function hideLoader() {
 function doHideLoader() {
   if (loaderHidden) return;
   loaderHidden = true;
+  // Avisa o guard para ele não repetir o trabalho aos 3s.
+  window.__mesaLoaderGuard?.markHidden();
   const loader = document.getElementById("app-loader");
   if (loader) {
     loader.classList.add("is-hidden");
@@ -293,16 +296,15 @@ function doHideLoader() {
   }
 }
 
-// Fallback: se o Supabase demorar demais, esconde o loader após 4s.
-window.setTimeout(doHideLoader, LOADER_MAX_MS);
-
-// Também espera o evento window "load" (todos os recursos carregados).
-if (document.readyState === "complete") {
-  // já carregou antes do módulo rodar
+// Teto de segurança no DOMContentLoaded (NÃO em window.load, que espera imagens
+// e o GTM). Assim o loader nunca trava, mesmo se o Supabase/GTM falharem.
+function armLoaderFallback() {
+  window.setTimeout(doHideLoader, LOADER_MAX_MS);
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", armLoaderFallback, { once: true });
 } else {
-  window.addEventListener("load", () => {
-    // Só adianta o hide se a conta já estiver pronta; init() chama hideLoader ao final.
-  }, { once: true });
+  armLoaderFallback();
 }
 
 init().catch(async error => {

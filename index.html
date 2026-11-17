@@ -101,6 +101,9 @@
   <!-- Aplica o tema ANTES do paint para evitar piscar (FOUC). Arquivo próprio:
        o CSP proíbe scripts inline (sem 'unsafe-inline'). -->
   <script src="./js/theme-boot.js"></script>
+  <!-- Rede de segurança: garante que o loader sempre desapareça, mesmo se um
+       módulo for bloqueado (CSP/adblock) ou travar. Precisa rodar antes dos módulos. -->
+  <script src="./js/loader-guard.js"></script>
   <link rel="stylesheet" href="./css/bootstrap-icons.css">
   <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/dice.css">
